@@ -14,9 +14,6 @@ from bot import Bot
 from config import *
 from helper_func import *
 from database.database import *
-import secrets
-from bot import Bot
-from database.db_premium import collection, list_premium_users
 
 #=====================================================================================##
 
@@ -27,13 +24,11 @@ async def stats(bot: Bot, message: Message):
     time = get_readable_time(delta.seconds)
     await message.reply(BOT_STATS_TEXT.format(uptime=time))
 
-
 #=====================================================================================##
 
 WAIT_MSG = "<b>Working....</b>"
 
 #=====================================================================================##
-
 
 @Bot.on_message(filters.command('users') & filters.private & admin)
 async def get_users(client: Bot, message: Message):
@@ -41,226 +36,226 @@ async def get_users(client: Bot, message: Message):
     users = await db.full_userbase()
     await msg.edit(f"{len(users)} users are using this bot")
 
-# Don't Remove Credit @CodeFlix_Bots, @rohit_1888
-# Ask Doubt on telegram @CodeflixSupport
-#
-# Copyright (C) 2025 by Codeflix-Bots@Github, < https://github.com/Codeflix-Bots >.
-#
-# This file is part of < https://github.com/Codeflix-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/Codeflix-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
-
 #=====================================================================================##
 
-#AUTO-DELETE
+# AUTO-DELETE
 
 @Bot.on_message(filters.private & filters.command('dlt_time') & admin)
 async def set_delete_time(client: Bot, message: Message):
     try:
         duration = int(message.command[1])
-
         await db.set_del_timer(duration)
-
         await message.reply(f"<b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀs ʙᴇᴇɴ sᴇᴛ ᴛᴏ <blockquote>{duration} sᴇᴄᴏɴᴅs.</blockquote></b>")
-
     except (IndexError, ValueError):
         await message.reply("<b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ sᴇᴄᴏɴᴅs.</b> Usage: /dlt_time {duration}")
 
 @Bot.on_message(filters.private & filters.command('check_dlt_time') & admin)
 async def check_delete_time(client: Bot, message: Message):
     duration = await db.get_del_timer()
-
     await message.reply(f"<b><blockquote>Cᴜʀʀᴇɴᴛ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ ɪs sᴇᴛ ᴛᴏ {duration}sᴇᴄᴏɴᴅs.</blockquote></b>")
 
-@Bot.on_message(filters.command('stats') & filters.private & admin)
-async def stats_command(client: Client, message: Message):
+#=====================================================================================##
+
+# NEW COMMANDS FROM PREVIOUS UPDATE
+
+# Ping command to check bot's response time
+@Bot.on_message(filters.command('ping') & filters.private)
+async def ping_bot(client: Bot, message: Message):
+    start_time = time.time()
+    msg = await message.reply("<b>Pinging...</b>")
+    end_time = time.time()
+    latency = (end_time - start_time) * 1000  # Convert to milliseconds
+    await msg.edit(f"<b>Pong!</b> Latency: <code>{latency:.2f} ms</code>")
+
+# Uptime command to check how long the bot has been running
+@Bot.on_message(filters.command('uptime') & filters.private)
+async def uptime_bot(bot: Bot, message: Message):
+    now = datetime.now()
+    delta = now - bot.uptime
+    uptime_str = get_readable_time(delta.seconds)
+    await message.reply(f"<b>Bot Uptime:</b> <code>{uptime_str}</code>")
+
+# Logs command to fetch recent logs (admin-only)
+@Bot.on_message(filters.command('logs') & filters.private & admin)
+async def get_logs(client: Bot, message: Message):
     try:
-        total_files = await collection.count_documents({})
-        total_size = sum(doc.get("size", 0) async for doc in collection.find())
-        total_users = len(await db.full_userbase())
+        num_lines = 50  # Number of lines to fetch
+        if len(message.command) > 1:
+            try:
+                num_lines = int(message.command[1])
+                if num_lines <= 0:
+                    raise ValueError
+            except ValueError:
+                await message.reply("<b>Please provide a valid number of lines.</b> Usage: /logs [number]")
+                return
 
-        stats_message = (
-            f"<b>📊 Bot Stats</b>\n\n"
-            f"📂 Total Files: <code>{total_files}</code>\n"
-            f"💾 Total Size: <code>{total_size / (1024 * 1024):.2f} MB</code>\n"
-            f"👥 Total Users: <code>{total_users}</code>"
-        )
-        await message.reply_text(stats_message, parse_mode=ParseMode.HTML)
-    except Exception as e:
-        await message.reply_text(f"⚠️ Error fetching stats: <code>{str(e)}</code>")
+        # Read the last `num_lines` from the log file
+        with open(LOG_FILE_NAME, 'r') as f:
+            lines = f.readlines()
+            last_lines = lines[-num_lines:] if len(lines) >= num_lines else lines
+            log_content = "".join(last_lines)
 
-@Bot.on_message(filters.command('users') & filters.private & admin)
-async def users_command(client: Client, message: Message):
-    try:
-        total_users = len(await db.full_userbase())
-        premium_users = len(await list_premium_users())
-        uptime = int(time.time() - client.uptime)
-
-        stats_message = (
-            f"<b>📊 Bot Statistics</b>\n\n"
-            f"👥 Total Users: <code>{total_users}</code>\n"
-            f"🌟 Premium Users: <code>{premium_users}</code>\n"
-            f"📅 Uptime: <code>{get_readable_time(uptime)}</code>"
-        )
-        await message.reply_text(stats_message, parse_mode=ParseMode.HTML)
-    except Exception as e:
-        await message.reply_text(f"⚠️ Error fetching user stats: <code>{str(e)}</code>")
-
-@Bot.on_message(filters.command('addstartphoto') & filters.private & admin)
-async def addstartphoto_command(client: Client, message: Message):
-    if not message.reply_to_message or not message.reply_to_message.photo:
-        await message.reply_text("Reply to a photo with /addstartphoto.")
-        return
-    try:
-        photo_id = message.reply_to_message.photo.file_id
-        photo_key = secrets.token_hex(8)
-        await db.add_start_photo(photo_key, photo_id, message.from_user.id)
-        await message.reply_text(f"✅ Start photo added with key <code>{photo_key}</code>.")
-    except Exception as e:
-        await message.reply_text(f"⚠️ Error adding start photo: <code>{str(e)}</code>")
-
-@Bot.on_message(filters.command('showstartpic') & filters.private & admin)
-async def showstartpic_command(client: Client, message: Message):
-    try:
-        start_photos = await db.get_start_photos()
-        if not start_photos:
-            await message.reply_text("❌ No start photos found.")
+        if not log_content.strip():
+            await message.reply("<b>No logs found.</b>")
             return
-        photos_list = "\n".join(
-            f"🖼️ Key: <code>{key}</code>, Added by: <code>{data['added_by']}</code>"
-            for key, data in start_photos.items()
-        )
-        await message.reply_text(f"<b>📸 Start Photos</b>\n\n{photos_list}", parse_mode=ParseMode.HTML)
-    except Exception as e:
-        await message.reply_text(f"⚠️ Error fetching start photos: <code>{str(e)}</code>")
 
-@Bot.on_message(filters.command('delstartphoto') & filters.private & admin)
-async def delstartphoto_command(client: Client, message: Message):
-    if len(message.command) < 2:
-        await message.reply_text("Usage: /delstartphoto <photo_key>")
-        return
-    photo_key = message.command[1]
+        # Send logs as a message (if too long, split into multiple messages)
+        if len(log_content) > 4096:  # Telegram message length limit
+            for i in range(0, len(log_content), 4096):
+                await message.reply(f"<code>{log_content[i:i+4096]}</code>")
+        else:
+            await message.reply(f"<b>Recent Logs:</b>\n<code>{log_content}</code>")
+    except Exception as e:
+        await message.reply(f"<b>Failed to fetch logs:</b> <code>{str(e)}</code>")
+
+# Restart command (admin-only)
+@Bot.on_message(filters.command('restart') & filters.private & admin)
+async def restart_bot(client: Bot, message: Message):
+    msg = await message.reply("<b>Restarting bot...</b>")
     try:
-        start_photos = await db.get_start_photos()
-        if photo_key not in start_photos:
-            await message.reply_text(f"❌ Photo key <code>{photo_key}</code> not found.")
-            return
-        await db.delete_start_photo(photo_key)
-        await message.reply_text(f"✅ Start photo <code>{photo_key}</code> deleted.")
+        # Notify the owner
+        await client.send_message(OWNER_ID, "<b>Bot is restarting...</b>")
+        # Log the restart
+        LOGGER(__name__).info("Bot is restarting...")
+        # Stop the bot gracefully
+        await client.stop()
+        # Restart the process (this works if the bot is run with a process manager like PM2 or Heroku)
+        os.execl(sys.executable, sys.executable, *sys.argv)
     except Exception as e:
-        await message.reply_text(f"⚠️ Error deleting start photo: <code>{str(e)}</code>")
+        await msg.edit(f"<b>Failed to restart:</b> <code>{str(e)}</code>")
 
-@Bot.on_message(filters.command('addforcephoto') & filters.private & admin)
-async def addforcephoto_command(client: Client, message: Message):
-    if not message.reply_to_message or not message.reply_to_message.photo:
-        await message.reply_text("Reply to a photo with /addforcephoto.")
-        return
-    try:
-        photo_id = message.reply_to_message.photo.file_id
-        photo_key = secrets.token_hex(8)
-        await db.add_force_photo(photo_key, photo_id, message.from_user.id)
-        await message.reply_text(f"✅ Force sub photo added with key <code>{photo_key}</code>.")
-    except Exception as e:
-        await message.reply_text(f"⚠️ Error adding force sub photo: <code>{str(e)}</code>")
+#=====================================================================================##
 
-@Bot.on_message(filters.command('showforcepic') & filters.private & admin)
-async def showforcepic_command(client: Client, message: Message):
-    try:
-        force_photos = await db.get_force_photos()
-        if not force_photos:
-            await message.reply_text("❌ No force sub photos found.")
-            return
-        photos_list = "\n".join(
-            f"🖼️ Key: <code>{key}</code>, Added by: <code>{data['added_by']}</code>"
-            for key, data in force_photos.items()
-        )
-        await message.reply_text(f"<b>📸 Force Sub Photos</b>\n\n{photos_list}", parse_mode=ParseMode.HTML)
-    except Exception as e:
-        await message.reply_text(f"⚠️ Error fetching force sub photos: <code>{str(e)}</code>")
+# NEW COMMANDS FOR IMAGE AND SHORTENER MANAGEMENT
 
-@Bot.on_message(filters.command('delforcephoto') & filters.private & admin)
-async def delforcephoto_command(client: Client, message: Message):
-    if len(message.command) < 2:
-        await message.reply_text("Usage: /delforcephoto <photo_key>")
-        return
-    photo_key = message.command[1]
-    try:
-        force_photos = await db.get_force_photos()
-        if photo_key not in force_photos:
-            await message.reply_text(f"❌ Photo key <code>{photo_key}</code> not found.")
-            return
-        await db.delete_force_photo(photo_key)
-        await message.reply_text(f"✅ Force sub photo <code>{photo_key}</code> deleted.")
-    except Exception as e:
-        await message.reply_text(f"⚠️ Error deleting force sub photo: <code>{str(e)}</code>")
-
-@Bot.on_message(filters.command('version') & filters.private)
-async def version_command(client: Client, message: Message):
-    version_message = (
-        f"<b>🤖 {client.username} Version</b>\n\n"
-        f"🌟 Version: <code>1.0.0</code>\n"
-        f"📅 Last Updated: <code>2025-05-08</code>\n"
-        f"👑 Owner: <a href='https://t.me/{OWNER}'>{OWNER}</a>"
-    )
-    await message.reply_text(version_message, parse_mode=ParseMode.HTML)
-
-@Bot.on_message(filters.command('shortner') & filters.private & admin)
-async def shortner_command(client: Client, message: Message):
-    if len(message.command) != 3:
-        await message.reply_text(
-            "Usage: /shortner <SHORTLINK_API> <SHORTLINK_URL>\n\n"
-            "Example:\n"
-            "/shortner abc123 https://shortlink.example.com"
-        )
-        return
-    try:
-        shortlink_api = message.command[1]
-        shortlink_url = message.command[2]
-        await db.set_shortlink_config(shortlink_api, shortlink_url)
-        await message.reply_text(
-            f"✅ Shortlink config updated:\n"
-            f"API: <code>{shortlink_api}</code>\n"
-            f"URL: <code>{shortlink_url}</code>"
-        )
-    except Exception as e:
-        await message.reply_text(f"⚠️ Error updating shortlink config: <code>{str(e)}</code>")
-
-@Bot.on_message(filters.command('showshortner') & filters.private & admin)
-async def showshortner_command(client: Client, message: Message):
-    try:
-        config = await db.get_shortlink_config()
-        shortlink_api = config.get('api', 'Not set')
-        shortlink_url = config.get('url', 'Not set')
-        await message.reply_text(
-            f"<b>🔗 Shortlink Configuration</b>\n\n"
-            f"API: <code>{shortlink_api}</code>\n"
-            f"URL: <code>{shortlink_url}</code>"
-        )
-    except Exception as e:
-        await message.reply_text(f"⚠️ Error fetching shortlink config: <code>{str(e)}</code>")
-
-@Bot.on_message(filters.command('edittutvid') & filters.private & admin)
-async def edittutvid_command(client: Client, message: Message):
+# Add Force Sub Picture
+@Bot.on_message(filters.command('addforcesub') & filters.private & admin)
+async def add_force_sub_pic(client: Bot, message: Message):
     if len(message.command) != 2:
-        await message.reply_text(
-            "Usage: /edittutvid <TUT_VID_URL>\n\n"
-            "Example:\n"
-            "/edittutvid https://t.me/tutorial_video_new"
-        )
+        await message.reply("<b>Usage:</b> <code>/addforcesub [image_url]</code>")
+        return
+    url = message.command[1]
+    # Basic URL validation
+    if not url.startswith("http"):
+        await message.reply("<b>Invalid URL. Please provide a valid image URL starting with http or https.</b>")
         return
     try:
-        tut_vid_url = message.command[1]
-        # Basic URL validation
-        if not tut_vid_url.startswith(('http://', 'https://')):
-            await message.reply_text("⚠️ Please provide a valid URL starting with http:// or https://")
-            return
-        await db.set_tutorial_video(tut_vid_url)
-        await message.reply_text(
-            f"✅ Tutorial video URL updated:\n"
-            f"New URL: <code>{tut_vid_url}</code>"
-        )
+        await db.add_force_pic(url)
+        await message.reply(f"<b>Force Sub Picture added:</b> <code>{url}</code>")
     except Exception as e:
-        await message.reply_text(f"⚠️ Error updating tutorial video URL: <code>{str(e)}</code>")        
+        await message.reply(f"<b>Failed to add Force Sub Picture:</b> <code>{str(e)}</code>")
+
+# Add Start Sub Picture
+@Bot.on_message(filters.command('addstartsub') & filters.private & admin)
+async def add_start_sub_pic(client: Bot, message: Message):
+    if len(message.command) != 2:
+        await message.reply("<b>Usage:</b> <code>/addstartsub [image_url]</code>")
+        return
+    url = message.command[1]
+    if not url.startswith("http"):
+        await message.reply("<b>Invalid URL. Please provide a valid image URL starting with http or https.</b>")
+        return
+    try:
+        await db.add_start_pic(url)
+        await message.reply(f"<b>Start Sub Picture added:</b> <code>{url}</code>")
+    except Exception as e:
+        await message.reply(f"<b>Failed to add Start Sub Picture:</b> <code>{str(e)}</code>")
+
+# Delete Force Sub Picture
+@Bot.on_message(filters.command('delforcesub') & filters.private & admin)
+async def del_force_sub_pic(client: Bot, message: Message):
+    if len(message.command) != 2:
+        await message.reply("<b>Usage:</b> <code>/delforcesub [image_url]</code>")
+        return
+    url = message.command[1]
+    try:
+        await db.del_force_pic(url)
+        await message.reply(f"<b>Force Sub Picture deleted:</b> <code>{url}</code>")
+    except Exception as e:
+        await message.reply(f"<b>Failed to delete Force Sub Picture:</b> <code>{str(e)}</code>")
+
+# Delete Start Sub Picture
+@Bot.on_message(filters.command('delstartsub') & filters.private & admin)
+async def del_start_sub_pic(client: Bot, message: Message):
+    if len(message.command) != 2:
+        await message.reply("<b>Usage:</b> <code>/delstartsub [image_url]</code>")
+        return
+    url = message.command[1]
+    try:
+        await db.del_start_pic(url)
+        await message.reply(f"<b>Start Sub Picture deleted:</b> <code>{url}</code>")
+    except Exception as e:
+        await message.reply(f"<b>Failed to delete Start Sub Picture:</b> <code>{str(e)}</code>")
+
+# Show All Force Sub Pictures
+@Bot.on_message(filters.command('showforcesub') & filters.private & admin)
+async def show_force_sub_pics(client: Bot, message: Message):
+    try:
+        pics = await db.get_all_force_pics()
+        if not pics:
+            await message.reply("<b>No Force Sub Pictures found.</b>")
+            return
+        pic_list = "\n".join([f"<code>{pic}</code>" for pic in pics])
+        await message.reply(f"<b>Force Sub Pictures:</b>\n{pic_list}")
+    except Exception as e:
+        await message.reply(f"<b>Failed to fetch Force Sub Pictures:</b> <code>{str(e)}</code>")
+
+# Show All Start Sub Pictures
+@Bot.on_message(filters.command('showstartsub') & filters.private & admin)
+async def show_start_sub_pics(client: Bot, message: Message):
+    try:
+        pics = await db.get_all_start_pics()
+        if not pics:
+            await message.reply("<b>No Start Sub Pictures found.</b>")
+            return
+        pic_list = "\n".join([f"<code>{pic}</code>" for pic in pics])
+        await message.reply(f"<b>Start Sub Pictures:</b>\n{pic_list}")
+    except Exception as e:
+        await message.reply(f"<b>Failed to fetch Start Sub Pictures:</b> <code>{str(e)}</code>")
+
+# Edit Shortener Settings
+@Bot.on_message(filters.command('shortner') & filters.private & admin)
+async def edit_shortner(client: Bot, message: Message):
+    if len(message.command) != 3:
+        await message.reply("<b>Usage:</b> <code>/shortner [SHORTLINK_API] [SHORTLINK_URL]</code>")
+        return
+    new_api = message.command[1]
+    new_url = message.command[2]
+    try:
+        # Update environment variables (this change won't persist after a restart unless saved to the environment)
+        os.environ['SHORTLINK_API'] = new_api
+        os.environ['SHORTLINK_URL'] = new_url
+        # Update the config variables
+        globals()['SHORTLINK_API'] = new_api
+        globals()['SHORTLINK_URL'] = new_url
+        await message.reply(f"<b>Shortener settings updated:</b>\nSHORTLINK_API: <code>{new_api}</code>\nSHORTLINK_URL: <code>{new_url}</code>")
+    except Exception as e:
+        await message.reply(f"<b>Failed to update shortener settings:</b> <code>{str(e)}</code>")
+
+# Edit Tutorial Video URL
+@Bot.on_message(filters.command('edittutvid') & filters.private & admin)
+async def edit_tut_vid(client: Bot, message: Message):
+    if len(message.command) != 2:
+        await message.reply("<b>Usage:</b> <code>/edittutvid [new_url]</code>")
+        return
+    new_url = message.command[1]
+    if not new_url.startswith("http"):
+        await message.reply("<b>Invalid URL. Please provide a valid URL starting with http or https.</b>")
+        return
+    try:
+        os.environ['TUT_VID'] = new_url
+        globals()['TUT_VID'] = new_url
+        await message.reply(f"<b>Tutorial Video URL updated:</b> <code>{new_url}</code>")
+    except Exception as e:
+        await message.reply(f"<b>Failed to update Tutorial Video URL:</b> <code>{str(e)}</code>")
+
+# Show Current Shortener Settings
+@Bot.on_message(filters.command('showshortner') & filters.private & admin)
+async def show_shortner(client: Bot, message: Message):
+    try:
+        current_api = SHORTLINK_API
+        current_url = SHORTLINK_URL
+        await message.reply(f"<b>Current Shortener Settings:</b>\nSHORTLINK_API: <code>{current_api}</code>\nSHORTLINK_URL: <code>{current_url}</code>")
+    except Exception as e:
+        await message.reply(f"<b>Failed to fetch shortener settings:</b> <code>{str(e)}</code>")
+

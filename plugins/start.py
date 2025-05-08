@@ -1,3 +1,14 @@
+# Don't Remove Credit @CodeFlix_Bots, @rohit_1888
+# Ask Doubt on telegram @CodeflixSupport
+#
+# Copyright (C) 2025 by Codeflix-Bots@Github, < https://github.com/Codeflix-Bots >.
+#
+# This file is part of < https://github.com/Codeflix-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/Codeflix-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
+#
 
 import asyncio
 import os
@@ -19,7 +30,6 @@ from helper_func import *
 from database.database import *
 from database.db_premium import *
 
-
 BAN_SUPPORT = f"{BAN_SUPPORT}"
 TUT_VID = f"{TUT_VID}"
 
@@ -40,14 +50,12 @@ async def short_url(client: Client, message: Message, base64_string):
 
         await message.reply_photo(
             photo=SHORTENER_PIC,
-            caption=SHORT_MSG.format(
-            ),
+            caption=SHORT_MSG.format(),
             reply_markup=InlineKeyboardMarkup(buttons),
         )
 
     except IndexError:
         pass
-
 
 @Bot.on_message(filters.command('start') & filters.private)
 async def start_command(client: Client, message: Message):
@@ -183,16 +191,17 @@ async def start_command(client: Client, message: Message):
         reply_markup = InlineKeyboardMarkup(
             [
                     [InlineKeyboardButton("• ᴍᴏʀᴇ ᴄʜᴀɴɴᴇʟs •", url="https://t.me/Nova_Flix/50")],
-
-    [
-                    InlineKeyboardButton("• ᴀʙᴏᴜᴛ", callback_data = "about"),
-                    InlineKeyboardButton('ʜᴇʟᴘ •', callback_data = "help")
-
-    ]
+                    [
+                        InlineKeyboardButton("• ᴀʙᴏᴜᴛ", callback_data="about"),
+                        InlineKeyboardButton('ʜᴇʟᴘ •', callback_data="help")
+                    ]
             ]
         )
+        # Get all start pics from the database and select one randomly
+        start_pics = await db.get_all_start_pics()
+        selected_start_pic = random.choice(start_pics) if start_pics else START_PIC  # Fallback to START_PIC if none in DB
         await message.reply_photo(
-            photo=START_PIC,
+            photo=selected_start_pic,
             caption=START_MSG.format(
                 first=message.from_user.first_name,
                 last=message.from_user.last_name,
@@ -201,17 +210,14 @@ async def start_command(client: Client, message: Message):
                 id=message.from_user.id
             ),
             reply_markup=reply_markup,
-            message_effect_id=5104841245755180586)  # 🔥
-        
+            message_effect_id=5104841245755180586  # 🔥
+        )
         return
 
-
-
 #=====================================================================================##
+
 # Don't Remove Credit @CodeFlix_Bots, @rohit_1888
 # Ask Doubt on telegram @CodeflixSupport
-
-
 
 # Create a global dictionary to store chat data
 chat_data_cache = {}
@@ -247,16 +253,16 @@ async def not_joined(client: Client, message: Message):
                             chat_id=chat_id,
                             creates_join_request=True,
                             expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
-                            )
+                        )
                         link = invite.invite_link
-
                     else:
                         if data.username:
                             link = f"https://t.me/{data.username}"
                         else:
                             invite = await client.create_chat_invite_link(
                                 chat_id=chat_id,
-                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None)
+                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
+                            )
                             link = invite.invite_link
 
                     buttons.append([InlineKeyboardButton(text=name, url=link)])
@@ -281,8 +287,12 @@ async def not_joined(client: Client, message: Message):
         except IndexError:
             pass
 
+        # Get all force pics from the database and select one randomly
+        force_pics = await db.get_all_force_pics()
+        selected_force_pic = random.choice(force_pics) if force_pics else FORCE_PIC  # Fallback to FORCE_PIC if none in DB
+
         await message.reply_photo(
-            photo=FORCE_PIC,
+            photo=selected_force_pic,
             caption=FORCE_MSG.format(
                 first=message.from_user.first_name,
                 last=message.from_user.last_name,
@@ -296,7 +306,7 @@ async def not_joined(client: Client, message: Message):
     except Exception as e:
         print(f"Final Error: {e}")
         await temp.edit(
-            f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Real_Sukuna02</i></b>\n"
+            f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @rohit_1888</i></b>\n"
             f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
         )
 
@@ -313,7 +323,7 @@ async def check_plan(client: Client, message: Message):
     await message.reply(status_message)
 
 #=====================================================================================##
-# Command to add premium user
+
 @Bot.on_message(filters.command('addpremium') & filters.private & admin)
 async def add_premium_user_command(client, msg):
     if len(msg.command) != 4:
@@ -362,7 +372,6 @@ async def add_premium_user_command(client, msg):
     except Exception as e:
         await msg.reply_text(f"⚠️ An error occurred: `{str(e)}`")
 
-
 # Command to remove premium user
 @Bot.on_message(filters.command('remove_premium') & filters.private & admin)
 async def pre_remove_user(client: Client, msg: Message):
@@ -375,7 +384,6 @@ async def pre_remove_user(client: Client, msg: Message):
         await msg.reply_text(f"User {user_id} has been removed.")
     except ValueError:
         await msg.reply_text("user_id must be an integer or not available in database.")
-
 
 # Command to list active premium users
 @Bot.on_message(filters.command('premium_users') & filters.private & admin)
@@ -438,7 +446,6 @@ async def list_premium_users_command(client, message):
     else:
         await message.reply_text("\n\n".join(premium_user_list), parse_mode=None)
 
-
 #=====================================================================================##
 
 @Bot.on_message(filters.command("count") & filters.private & admin)
@@ -446,10 +453,9 @@ async def total_verify_count_cmd(client, message: Message):
     total = await db.get_total_verify_count()
     await message.reply_text(f"Tᴏᴛᴀʟ ᴠᴇʀɪғɪᴇᴅ ᴛᴏᴋᴇɴs ᴛᴏᴅᴀʏ: <b>{total}</b>")
 
-
 #=====================================================================================##
 
 @Bot.on_message(filters.command('commands') & filters.private & admin)
 async def bcmd(bot: Bot, message: Message):        
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("• ᴄʟᴏsᴇ •", callback_data = "close")]])
-    await message.reply(text=CMD_TXT, reply_markup = reply_markup, quote= True)
+    await message.reply(text=CMD_TXT, reply_markup=reply_markup, quote=True)

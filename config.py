@@ -65,7 +65,19 @@ CMD_TXT = """<blockquote><b>» ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs:</b></blockqu
 <b>›› /remove_premium :</b> ʀᴇᴍᴏᴠᴇ ᴘʀᴇᴍɪᴜᴍ ꜰʀᴏᴍ ᴀ ᴜꜱᴇʀ
 <b>›› /myplan :</b> ᴄʜᴇᴄᴋ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ sᴛᴀᴛᴜs
 <b>›› /count :</b> ᴄᴏᴜɴᴛ verifications
-<b>›› /edittutvid :</b> ᴇᴅɪᴛ ᴛʜᴇ ᴛᴜᴛᴏʀɪᴀʟ ᴠɪᴅᴇᴏ ᴜʀʟ
+<b>›› /ping :</b> ᴄʜᴇᴄᴋ ʙᴏᴛ ʟᴀᴛᴇɴᴄʏ
+<b>›› /uptime :</b> ᴄʜᴇᴄᴋ ʙᴏᴛ ʀᴜɴᴛɪᴍᴇ
+<b>›› /logs :</b> ɢᴇᴛ ʀᴇᴄᴇɴᴛ ʙᴏᴛ ʟᴏɢs
+<b>›› /restart :</b> ʀᴇsᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ
+<b>›› /addforcesub :</b> ᴀᴅᴅ ғᴏʀᴄᴇ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
+<b>›› /addstartsub :</b> ᴀᴅᴅ sᴛᴀʀᴛ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
+<b>›› /delforcesub :</b> ᴅᴇʟᴇᴛᴇ ғᴏʀᴄᴇ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
+<b>›› /delstartsub :</b> ᴅᴇʟᴇᴛᴇ sᴛᴀʀᴛ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
+<b>›› /showforcesub :</b> sʜᴏᴡ ᴀʟʟ ғᴏʀᴄᴇ sᴜʙ ᴘɪᴄᴛᴜʀᴇs
+<b>›› /showstartsub :</b> sʜᴏᴡ ᴀʟʟ sᴛᴀʀᴛ sᴜʙ ᴘɪᴄᴛᴜʀᴇs
+<b>›› /shortner :</b> ᴇᴅɪᴛ sʜᴏʀᴛʟɪɴᴋ ᴜʀʟ ᴀɴᴅ ᴀᴘɪ
+<b>›› /edittutvid :</b> ᴇᴅɪᴛ ᴛᴜᴛᴏʀɪᴀʟ ᴠɪᴅᴇᴏ ᴜʀʟ
+<b>›› /showshortner :</b> sʜᴏᴡ ᴄᴜʀʀᴇɴᴛ sʜᴏʀᴛʟɪɴᴋ sᴇᴛᴛɪɴɢs
 """
 #--------------------------------------------
 CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION", "<b>• ʙʏ @nova_flix</b>") #set your Custom Caption here, Keep None for Disable Custom Caption
