@@ -108,23 +108,23 @@ async def get_logs(client: Bot, message: Message):
     except Exception as e:
         await message.reply(f"<b>Failed to fetch logs:</b> <code>{str(e)}</code>")
 
-# Restart command (admin-only)
-@Bot.on_message(filters.command('restart') & filters.private & admin)
-async def restart_bot(client: Bot, message: Message):
-    msg = await message.reply("<b>Restarting bot...</b>")
-    try:
-        # Notify the owner
-        await client.send_message(OWNER_ID, "<b>Bot is restarting...</b>")
-        # Log the restart
-        LOGGER(__name__).info("Bot is restarting...")
-        # Stop the bot gracefully
-        await client.stop()
-        # Restart the process (this works if the bot is run with a process manager like PM2 or Heroku)
-        os.execl(sys.executable, sys.executable, *sys.argv)
-    except Exception as e:
-        await msg.edit(f"<b>Failed to restart:</b> <code>{str(e)}</code>")
+# # Restart command (admin-only)
+# @Bot.on_message(filters.command('restart') & filters.private & admin)
+# async def restart_bot(client: Bot, message: Message):
+#     msg = await message.reply("<b>Restarting bot...</b>")
+#     try:
+#         # Notify the owner
+#         await client.send_message(OWNER_ID, "<b>Bot is restarting...</b>")
+#         # Log the restart
+#         LOGGER(__name__).info("Bot is restarting...")
+#         # Stop the bot gracefully
+#         await client.stop()
+#         # Restart the process (this works if the bot is run with a process manager like PM2 or Heroku)
+#         os.execl(sys.executable, sys.executable, *sys.argv)
+#     except Exception as e:
+#         await msg.edit(f"<b>Failed to restart:</b> <code>{str(e)}</code>")
 
-#=====================================================================================##
+# #=====================================================================================##
 
 # NEW COMMANDS FOR IMAGE AND SHORTENER MANAGEMENT
 
