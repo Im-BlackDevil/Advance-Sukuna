@@ -15,7 +15,7 @@ database = dbclient[DB_NAME]
 logging.basicConfig(level=logging.INFO)
 
 # Default TUT_VID value
-DEFAULT_TUT_VID = "https://t.me/Infinity_0034/9"
+TUT_VID = "https://t.me/Infinity_0034/9"
 
 default_verify = {
     'is_verified': False,
@@ -77,7 +77,7 @@ class Sukuna:
         if not existing_config:
             await self.tutorial_config.insert_one({
                 '_id': 'config',
-                'tut_vid': DEFAULT_TUT_VID
+                'tut_vid': TUT_VID
             })
             logging.info("Initialized default tutorial config in database.")
 
@@ -276,7 +276,7 @@ class Sukuna:
 
     async def get_tutorial_video(self):
         config = await self.tutorial_config.find_one({'_id': 'config'})
-        return config.get('tut_vid', DEFAULT_TUT_VID) if config else DEFAULT_TUT_VID
+        return config.get('tut_vid', TUT_VID) if config else TUT_VID
 
     # START PHOTOS MANAGEMENT
     async def add_start_photo(self, photo_key: str, file_id: str, added_by: int):
