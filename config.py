@@ -69,12 +69,12 @@ CMD_TXT = """<blockquote><b>» ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs:</b></blockqu
 <b>›› /uptime :</b> ᴄʜᴇᴄᴋ ʙᴏᴛ ʀᴜɴᴛɪᴍᴇ
 <b>›› /logs :</b> ɢᴇᴛ ʀᴇᴄᴇɴᴛ ʙᴏᴛ ʟᴏɢs
 <b>›› /restart :</b> ʀᴇsᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ
-<b>›› /addforcesub :</b> ᴀᴅᴅ ғᴏʀᴄᴇ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
-<b>›› /addstartsub :</b> ᴀᴅᴅ sᴛᴀʀᴛ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
-<b>›› /delforcesub :</b> ᴅᴇʟᴇᴛᴇ ғᴏʀᴄᴇ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
-<b>›› /delstartsub :</b> ᴅᴇʟᴇᴛᴇ sᴛᴀʀᴛ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
-<b>›› /showforcesub :</b> sʜᴏᴡ ᴀʟʟ ғᴏʀᴄᴇ sᴜʙ ᴘɪᴄᴛᴜʀᴇs
-<b>›› /showstartsub :</b> sʜᴏᴡ ᴀʟʟ sᴛᴀʀᴛ sᴜʙ ᴘɪᴄᴛᴜʀᴇs
+<b>›› /addforcepic :</b> ᴀᴅᴅ ғᴏʀᴄᴇ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
+<b>›› /addstartpic :</b> ᴀᴅᴅ sᴛᴀʀᴛ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
+<b>›› /delforcepic :</b> ᴅᴇʟᴇᴛᴇ ғᴏʀᴄᴇ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
+<b>›› /delstartpic :</b> ᴅᴇʟᴇᴛᴇ sᴛᴀʀᴛ sᴜʙ ᴘɪᴄᴛᴜʀᴇ
+<b>›› /showforcepic :</b> sʜᴏᴡ ᴀʟʟ ғᴏʀᴄᴇ sᴜʙ ᴘɪᴄᴛᴜʀᴇs
+<b>›› /showstartpic :</b> sʜᴏᴡ ᴀʟʟ sᴛᴀʀᴛ sᴜʙ ᴘɪᴄᴛᴜʀᴇs
 <b>›› /shortner :</b> ᴇᴅɪᴛ sʜᴏʀᴛʟɪɴᴋ ᴜʀʟ ᴀɴᴅ ᴀᴘɪ
 <b>›› /edittutvid :</b> ᴇᴅɪᴛ ᴛᴜᴛᴏʀɪᴀʟ ᴠɪᴅᴇᴏ ᴜʀʟ
 <b>›› /showshortner :</b> sʜᴏᴡ ᴄᴜʀʀᴇɴᴛ sʜᴏʀᴛʟɪɴᴋ sᴇᴛᴛɪɴɢs
