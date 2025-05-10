@@ -31,6 +31,9 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+SHORTLINK_API = os.environ.get("SHORTLINK_API", "573350da0e10a5a44f7e6fec3bc2b3f836b47805")  # Default Shortlink API
+SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "linkshortify.com")  # Default Shortlink URL
+
 #=====================================================================================##
 
 @Bot.on_message(filters.command('stats') & filters.private & admin)
@@ -79,23 +82,17 @@ async def check_delete_time(client: Bot, message: Message):
 # NEW COMMANDS FROM PREVIOUS UPDATE
 
 # Ping command to check bot's response time
-@Bot.on_message(filters.command('ping') & filters.private)
+@Bot.on_message(filters.private & filters.command('ping') & admin)
 async def ping_bot(client: Bot, message: Message):
     logger.debug(f"Received /ping command from user {message.from_user.id}")
     start_time = time.time()
     msg = await message.reply("<b>Pinging...</b>")
     end_time = time.time()
     latency = (end_time - start_time) * 1000  # Convert to milliseconds
-    await msg.edit(f"<b>Pong!</b> Latency: <code>{latency:.2f} ms</code>")
+    await msg.edit(f"<b><blockquote>Cᴜʀʀᴇɴᴛ Lᴀᴛᴇɴᴄʏ ɪs {latency:.2f}ᴍɪʟʟɪ sᴇᴄᴏɴᴅs.</blockquote></b>")
 
-# Uptime command to check how long the bot has been running
-@Bot.on_message(filters.command('uptime') & filters.private)
-async def uptime_bot(bot: Bot, message: Message):
-    logger.debug(f"Received /uptime command from user {message.from_user.id}")
-    now = datetime.now()
-    delta = now - bot.uptime
-    uptime_str = get_readable_time(delta.seconds)
-    await message.reply(f"<b>Bot Uptime:</b> <code>{uptime_str}</code>")
+# <b>Pong!</b> Latency: <code>{latency:.2f} ms</code>
+
 
 # Logs command to fetch recent logs (admin-only)
 @Bot.on_message(filters.command('logs') & filters.private & admin)
@@ -153,7 +150,7 @@ async def restart_bot(client: Bot, message: Message):
 # NEW COMMANDS FOR IMAGE AND SHORTENER MANAGEMENT
 
 # Add Force Sub Picture
-@Bot.on_message(filters.command('addforcesub') & filters.private)  # Removed admin filter for testing
+@Bot.on_message(filters.command('addforcepic') & filters.private & admin)  
 async def add_force_sub_pic(client: Bot, message: Message):
     logger.debug(f"Received /addforcesub command from user {message.from_user.id}")
     if len(message.command) != 2:
@@ -171,7 +168,7 @@ async def add_force_sub_pic(client: Bot, message: Message):
         await message.reply(f"<b>Failed to add Force Sub Picture:</b> <code>{str(e)}</code>")
 
 # Add Start Sub Picture
-@Bot.on_message(filters.command('addstartsub') & filters.private)  # Removed admin filter for testing
+@Bot.on_message(filters.command('addstartpic') & filters.private & admin)
 async def add_start_sub_pic(client: Bot, message: Message):
     logger.debug(f"Received /addstartsub command from user {message.from_user.id}")
     if len(message.command) != 2:
@@ -188,7 +185,7 @@ async def add_start_sub_pic(client: Bot, message: Message):
         await message.reply(f"<b>Failed to add Start Sub Picture:</b> <code>{str(e)}</code>")
 
 # Delete Force Sub Picture
-@Bot.on_message(filters.command('delforcesub') & filters.private)  # Removed admin filter for testing
+@Bot.on_message(filters.command('delforcepic') & filters.private & admin)  
 async def del_force_sub_pic(client: Bot, message: Message):
     logger.debug(f"Received /delforcesub command from user {message.from_user.id}")
     if len(message.command) != 2:
@@ -202,7 +199,7 @@ async def del_force_sub_pic(client: Bot, message: Message):
         await message.reply(f"<b>Failed to delete Force Sub Picture:</b> <code>{str(e)}</code>")
 
 # Delete Start Sub Picture
-@Bot.on_message(filters.command('delstartsub') & filters.private)  # Removed admin filter for testing
+@Bot.on_message(filters.command('delstartpic') & filters.private & admin)  
 async def del_start_sub_pic(client: Bot, message: Message):
     logger.debug(f"Received /delstartsub command from user {message.from_user.id}")
     if len(message.command) != 2:
@@ -216,7 +213,7 @@ async def del_start_sub_pic(client: Bot, message: Message):
         await message.reply(f"<b>Failed to delete Start Sub Picture:</b> <code>{str(e)}</code>")
 
 # Show All Force Sub Pictures
-@Bot.on_message(filters.command('showforcesub') & filters.private)  # Removed admin filter for testing
+@Bot.on_message(filters.command('showforcepic') & filters.private & admin)  
 async def show_force_sub_pics(client: Bot, message: Message):
     logger.debug(f"Received /showforcesub command from user {message.from_user.id}")
     try:
@@ -230,7 +227,7 @@ async def show_force_sub_pics(client: Bot, message: Message):
         await message.reply(f"<b>Failed to fetch Force Sub Pictures:</b> <code>{str(e)}</code>")
 
 # Show All Start Sub Pictures
-@Bot.on_message(filters.command('showstartsub') & filters.private)  # Removed admin filter for testing
+@Bot.on_message(filters.command('showstartpic') & filters.private & admin)  
 async def show_start_sub_pics(client: Bot, message: Message):
     logger.debug(f"Received /showstartsub command from user {message.from_user.id}")
     try:
@@ -244,7 +241,7 @@ async def show_start_sub_pics(client: Bot, message: Message):
         await message.reply(f"<b>Failed to fetch Start Sub Pictures:</b> <code>{str(e)}</code>")
 
 # Edit Shortener Settings
-@Bot.on_message(filters.command('shortner') & filters.private)  # Removed admin filter for testing
+@Bot.on_message(filters.command('shortner') & filters.private & admin)  
 async def edit_shortner(client: Bot, message: Message):
     logger.debug(f"Received /shortner command from user {message.from_user.id}")
     if len(message.command) != 3:
@@ -264,7 +261,7 @@ async def edit_shortner(client: Bot, message: Message):
         await message.reply(f"<b>Failed to update shortener settings:</b> <code>{str(e)}</code>")
 
 # Edit Tutorial Video URL
-@Bot.on_message(filters.command('edittutvid') & filters.private)  # Removed admin filter for testing
+@Bot.on_message(filters.command('edittutvid') & filters.private & admin)  
 async def edit_tut_vid(client: Bot, message: Message):
     logger.debug(f"Received /edittutvid command from user {message.from_user.id}")
     if len(message.command) != 2:
@@ -282,7 +279,7 @@ async def edit_tut_vid(client: Bot, message: Message):
         await message.reply(f"<b>Failed to update Tutorial Video URL:</b> <code>{str(e)}</code>")
 
 # Show Current Shortener Settings
-@Bot.on_message(filters.command('showshortner') & filters.private)  # Removed admin filter for testing
+@Bot.on_message(filters.command('showshortner') & filters.private & admin)
 async def show_shortner(client: Bot, message: Message):
     logger.debug(f"Received /showshortner command from user {message.from_user.id}")
     try:
