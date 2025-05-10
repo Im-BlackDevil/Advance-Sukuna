@@ -11,7 +11,6 @@ from config import *
 
 name ="""
  BY INFINIX SYNDICATE
-██████╗░░█████╗░██████╗░██╗░░██╗██╗███╗░░██╗
 """
 
 
