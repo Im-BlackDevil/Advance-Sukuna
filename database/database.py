@@ -1,5 +1,3 @@
-#Codeflix_Botz
-#rohit_1888 on Tg
 
 import motor, asyncio
 import motor.motor_asyncio
@@ -8,6 +6,7 @@ import pymongo, os
 from config import DB_URI, DB_NAME, SHORTLINK_API, SHORTLINK_URL
 import logging
 from datetime import datetime, timedelta
+from bson import ObjectId
 
 dbclient = pymongo.MongoClient(DB_URI)
 database = dbclient[DB_NAME]
@@ -52,13 +51,9 @@ class rohit:
         self.rqst_fsub_data = self.database['request_forcesub']
         self.rqst_fsub_Channel_data = self.database['request_forcesub_channel']
         self.shortlink_config = self.database['shortlink_config']
-        self.start_photos = self.database['start_photos']
-        self.force_photos = self.database['force_photos']
-        self.tutorial_config = self.database['tutorial_config']  # New collection for TUT_VID
-
-        # Initialize default configs on startup
-        asyncio.create_task(self.initialize_shortlink_config())
-        asyncio.create_task(self.initialize_tutorial_config())
+        self.start_pics = self.database['start_pics']  # Use start_pics collection
+        self.force_pics = self.database['force_pics']  # Use force_pics collection
+        self.tutorial_config = self.database['tutorial_config']
 
     async def initialize_shortlink_config(self):
         """Initialize shortlink_config with default values if not set."""
@@ -278,40 +273,38 @@ class rohit:
         config = await self.tutorial_config.find_one({'_id': 'config'})
         return config.get('tut_vid', TUT_VID) if config else TUT_VID
 
-    # START PHOTOS MANAGEMENT
-    async def add_start_photo(self, photo_key: str, file_id: str, added_by: int):
-        await self.start_photos.update_one(
-            {'_id': 'photos'},
-            {'$set': {f'photos.{photo_key}': {'file_id': file_id, 'added_by': added_by}}},
-            upsert=True
-        )
+# START PHOTOS MANAGEMENT (Updated to use start_pics collection)
+    async def add_start_photo(self, url: str, added_by: int):
+        photo_data = {
+            "url": url,
+            "added_by": added_by,
+            "timestamp": int(time.time())  # Add timestamp for sorting
+        }
+        await self.start_pics.insert_one(photo_data)
 
     async def get_start_photos(self):
-        photos = await self.start_photos.find_one({'_id': 'photos'})
-        return photos.get('photos', {}) if photos else {}
+        photos = await self.start_pics.find().to_list(length=None)
+        return photos  # Returns a list of documents
 
-    async def delete_start_photo(self, photo_key: str):
-        await self.start_photos.update_one(
-            {'_id': 'photos'},
-            {'$unset': {f'photos.{photo_key}': ""}}
-        )
+    async def delete_start_photo(self, photo_id: str):
+        await self.start_pics.delete_one({"_id": ObjectId(photo_id)})
 
-    # FORCE PHOTOS MANAGEMENT
-    async def add_force_photo(self, photo_key: str, file_id: str, added_by: int):
-        await self.force_photos.update_one(
-            {'_id': 'photos'},
-            {'$set': {f'photos.{photo_key}': {'file_id': file_id, 'added_by': added_by}}},
-            upsert=True
-        )
+
+# FORCE PHOTOS MANAGEMENT (Updated to use force_pics collection)
+    async def add_force_photo(self, url: str, added_by: int):
+        photo_data = {
+            "url": url,
+            "added_by": added_by,
+            "timestamp": int(time.time())  # Add timestamp for sorting
+        }
+        await self.force_pics.insert_one(photo_data)
 
     async def get_force_photos(self):
-        photos = await self.force_photos.find_one({'_id': 'photos'})
-        return photos.get('photos', {}) if photos else {}
+        photos = await self.force_pics.find().to_list(length=None)
+        return photos  # Returns a list of documents
 
-    async def delete_force_photo(self, photo_key: str):
-        await self.force_photos.update_one(
-            {'_id': 'photos'},
-            {'$unset': {f'photos.{photo_key}': ""}}
-        )
+    async def delete_force_photo(self, photo_id: str):
+        await self.force_pics.delete_one({"_id": ObjectId(photo_id)})
+
 
 db = rohit(DB_URI, DB_NAME)

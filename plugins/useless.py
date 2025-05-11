@@ -139,7 +139,6 @@ async def restart_bot(client: Bot, message: Message):
 # NEW COMMANDS FOR IMAGE AND SHORTENER MANAGEMENT
 
 # Add Force Sub Picture
-# Add Force Sub Picture
 @Bot.on_message(filters.command('addforcepic') & filters.private & admin)  
 async def add_force_sub_pic(client: Bot, message: Message):
     logger.debug(f"Received /addforcepic command from user {message.from_user.id}")
@@ -152,9 +151,7 @@ async def add_force_sub_pic(client: Bot, message: Message):
         await message.reply("<b>Invalid URL. Please provide a valid image URL starting with http or https.</b>")
         return
     try:
-        # Use the URL as a file_id (simplification; adjust if needed)
-        photo_key = f"force_{int(time.time())}"  # Generate a unique key
-        await db.add_force_photo(photo_key, url, message.from_user.id)
+        await db.add_force_photo(url, message.from_user.id)
         await message.reply(f"<b>Force Sub Picture added:</b> <code>{url}</code>")
     except Exception as e:
         await message.reply(f"<b>Failed to add Force Sub Picture:</b> <code>{str(e)}</code>")
@@ -171,9 +168,7 @@ async def add_start_sub_pic(client: Bot, message: Message):
         await message.reply("<b>Invalid URL. Please provide a valid image URL starting with http or https.</b>")
         return
     try:
-        # Use the URL as a file_id (simplification; adjust if needed)
-        photo_key = f"start_{int(time.time())}"  # Generate a unique key
-        await db.add_start_photo(photo_key, url, message.from_user.id)
+        await db.add_start_photo(url, message.from_user.id)
         await message.reply(f"<b>Start Sub Picture added:</b> <code>{url}</code>")
     except Exception as e:
         await message.reply(f"<b>Failed to add Start Sub Picture:</b> <code>{str(e)}</code>")
@@ -183,12 +178,12 @@ async def add_start_sub_pic(client: Bot, message: Message):
 async def del_force_sub_pic(client: Bot, message: Message):
     logger.debug(f"Received /delforcepic command from user {message.from_user.id}")
     if len(message.command) != 2:
-        await message.reply("<b>Usage:</b> <code>/delforcepic [photo_key]</code>\nUse /showforcepic to get the photo_key.")
+        await message.reply("<b>Usage:</b> <code>/delforcepic [photo_id]</code>\nUse /showforcepic to get the photo_id.")
         return
-    photo_key = message.command[1]
+    photo_id = message.command[1]
     try:
-        await db.delete_force_photo(photo_key)
-        await message.reply(f"<b>Force Sub Picture deleted:</b> <code>{photo_key}</code>")
+        await db.delete_force_photo(photo_id)
+        await message.reply(f"<b>Force Sub Picture deleted:</b> <code>{photo_id}</code>")
     except Exception as e:
         await message.reply(f"<b>Failed to delete Force Sub Picture:</b> <code>{str(e)}</code>")
 
@@ -197,12 +192,12 @@ async def del_force_sub_pic(client: Bot, message: Message):
 async def del_start_sub_pic(client: Bot, message: Message):
     logger.debug(f"Received /delstartpic command from user {message.from_user.id}")
     if len(message.command) != 2:
-        await message.reply("<b>Usage:</b> <code>/delstartpic [photo_key]</code>\nUse /showstartpic to get the photo_key.")
+        await message.reply("<b>Usage:</b> <code>/delstartpic [photo_id]</code>\nUse /showstartpic to get the photo_id.")
         return
-    photo_key = message.command[1]
+    photo_id = message.command[1]
     try:
-        await db.delete_start_photo(photo_key)
-        await message.reply(f"<b>Start Sub Picture deleted:</b> <code>{photo_key}</code>")
+        await db.delete_start_photo(photo_id)
+        await message.reply(f"<b>Start Sub Picture deleted:</b> <code>{photo_id}</code>")
     except Exception as e:
         await message.reply(f"<b>Failed to delete Start Sub Picture:</b> <code>{str(e)}</code>")
 
@@ -215,7 +210,7 @@ async def show_force_sub_pics(client: Bot, message: Message):
         if not pics:
             await message.reply("<b>No Force Sub Pictures found.</b>")
             return
-        pic_list = "\n".join([f"Key: <code>{key}</code>\nFile ID: <code>{value['file_id']}</code>\nAdded by: <code>{value['added_by']}</code>" for key, value in pics.items()])
+        pic_list = "\n".join([f"ID: <code>{str(pic['_id'])}</code>\nURL: <code>{pic['url']}</code>\nAdded by: <code>{pic['added_by']}</code>" for pic in pics])
         await message.reply(f"<b>Force Sub Pictures:</b>\n{pic_list}")
     except Exception as e:
         await message.reply(f"<b>Failed to fetch Force Sub Pictures:</b> <code>{str(e)}</code>")
@@ -229,7 +224,7 @@ async def show_start_sub_pics(client: Bot, message: Message):
         if not pics:
             await message.reply("<b>No Start Sub Pictures found.</b>")
             return
-        pic_list = "\n".join([f"Key: <code>{key}</code>\nFile ID: <code>{value['file_id']}</code>\nAdded by: <code>{value['added_by']}</code>" for key, value in pics.items()])
+        pic_list = "\n".join([f"ID: <code>{str(pic['_id'])}</code>\nURL: <code>{pic['url']}</code>\nAdded by: <code>{pic['added_by']}</code>" for pic in pics])
         await message.reply(f"<b>Start Sub Pictures:</b>\n{pic_list}")
     except Exception as e:
         await message.reply(f"<b>Failed to fetch Start Sub Pictures:</b> <code>{str(e)}</code>")

@@ -1,7 +1,7 @@
 
 import asyncio
 import os
-import random
+import random  # Add this import for random selection
 import sys
 import re
 import string 
@@ -77,12 +77,11 @@ async def start_command(client: Client, message: Message):
         except:
             pass
 
-    # Fetch the latest start sub picture from the database
+    # Fetch all start sub pictures from the database
     start_photos = await db.get_start_photos()
     if start_photos:
-        # Sort photos by key (which includes timestamp) to get the latest one
-        latest_photo_key = sorted(start_photos.keys(), reverse=True)[0]
-        start_pic = start_photos[latest_photo_key]['file_id']
+        # Randomly select one image from the list
+        start_pic = random.choice(start_photos)['url']
     else:
         start_pic = START_PIC  # Fallback to default if no photos in DB
 
@@ -196,7 +195,7 @@ async def start_command(client: Client, message: Message):
             ]
         )
         await message.reply_photo(
-            photo=start_pic,  # Use the dynamically fetched start_pic
+            photo=start_pic,  # Use the dynamically selected start_pic
             caption=START_MSG.format(
                 first=message.from_user.first_name,
                 last=message.from_user.last_name,
