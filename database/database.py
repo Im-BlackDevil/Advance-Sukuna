@@ -274,11 +274,9 @@ class rohit:
         return config.get('tut_vid', TUT_VID) if config else TUT_VID
 
 # START PHOTOS MANAGEMENT (Updated to use start_pics collection)
-    async def add_start_photo(self, url: str, added_by: int):
+    async def add_start_photo(self, url: str):
         photo_data = {
-            "url": url,
-            "added_by": added_by,
-            "timestamp": int(time.time())  # Add timestamp for sorting
+            "url": url
         }
         await self.start_pics.insert_one(photo_data)
 
@@ -291,11 +289,9 @@ class rohit:
 
 
 # FORCE PHOTOS MANAGEMENT (Updated to use force_pics collection)
-    async def add_force_photo(self, url: str, added_by: int):
+    async def add_force_photo(self, url: str):
         photo_data = {
-            "url": url,
-            "added_by": added_by,
-            "timestamp": int(time.time())  # Add timestamp for sorting
+            "url": url
         }
         await self.force_pics.insert_one(photo_data)
 
