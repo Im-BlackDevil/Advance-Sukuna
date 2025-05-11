@@ -26,8 +26,8 @@ TG_BOT_WORKERS = int(os.environ.get("TG_BOT_WORKERS", "200"))
 START_PIC = os.environ.get("START_PIC", "https://wallpapercave.com/wp/wp14238410.jpg")
 FORCE_PIC = os.environ.get("FORCE_PIC", "https://c4.wallpaperflare.com/wallpaper/444/1009/77/jujutsu-kaisen-anime-boys-yuji-itadori-ryomen-sukuna-hd-wallpaper-preview.jpg")
 #--------------------------------------------
-# SHORTLINK_API = os.environ.get("SHORTLINK_API", "573350da0e10a5a44f7e6fec3bc2b3f836b47805")  # Default Shortlink API
-# SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "linkshortify.com")  # Default Shortlink URL
+SHORTLINK_API = os.environ.get("SHORTLINK_API", "573350da0e10a5a44f7e6fec3bc2b3f836b47805")  # Default Shortlink API
+SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "linkshortify.com")  # Default Shortlink URL
 SHORT_MSG = "<b>⌯ Here is Your Download Link, Must Watch Tutorial Before Clicking On Download...</b>"
 
 SHORTENER_PIC = os.environ.get("SHORTENER_PIC", "https://wallpapercave.com/wp/wp14238410.jpg")
