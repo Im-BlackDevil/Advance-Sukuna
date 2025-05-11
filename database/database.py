@@ -35,7 +35,7 @@ def new_user(id):
         }
     }
 
-class Sukuna:
+class rohit:
 
     def __init__(self, DB_URI, DB_NAME):
         self.dbclient = motor.motor_asyncio.AsyncIOMotorClient(DB_URI)
@@ -314,4 +314,4 @@ class Sukuna:
             {'$unset': {f'photos.{photo_key}': ""}}
         )
 
-db = Sukuna(DB_URI, DB_NAME)
+db = rohit(DB_URI, DB_NAME)
