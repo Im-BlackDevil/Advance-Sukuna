@@ -5,7 +5,7 @@ import motor, asyncio
 import motor.motor_asyncio
 import time
 import pymongo, os
-from config import DB_URI, DB_NAME
+from config import DB_URI, DB_NAME, SHORTLINK_API, SHORTLINK_URL
 import logging
 from datetime import datetime, timedelta
 
@@ -13,6 +13,9 @@ dbclient = pymongo.MongoClient(DB_URI)
 database = dbclient[DB_NAME]
 
 logging.basicConfig(level=logging.INFO)
+
+# Default TUT_VID value
+TUT_VID = "https://t.me/Infinity_0034/9"
 
 default_verify = {
     'is_verified': False,
@@ -32,7 +35,7 @@ def new_user(id):
         }
     }
 
-class Rohit:
+class Sukuna:
 
     def __init__(self, DB_URI, DB_NAME):
         self.dbclient = motor.motor_asyncio.AsyncIOMotorClient(DB_URI)
@@ -48,9 +51,35 @@ class Rohit:
         self.fsub_data = self.database['fsub']   
         self.rqst_fsub_data = self.database['request_forcesub']
         self.rqst_fsub_Channel_data = self.database['request_forcesub_channel']
-        # New collections for storing image URLs
-        self.force_pic_data = self.database['force_pics']
-        self.start_pic_data = self.database['start_pics']
+        self.shortlink_config = self.database['shortlink_config']
+        self.start_photos = self.database['start_photos']
+        self.force_photos = self.database['force_photos']
+        self.tutorial_config = self.database['tutorial_config']  # New collection for TUT_VID
+
+        # Initialize default configs on startup
+        asyncio.create_task(self.initialize_shortlink_config())
+        asyncio.create_task(self.initialize_tutorial_config())
+
+    async def initialize_shortlink_config(self):
+        """Initialize shortlink_config with default values if not set."""
+        existing_config = await self.shortlink_config.find_one({'_id': 'config'})
+        if not existing_config:
+            await self.shortlink_config.insert_one({
+                '_id': 'config',
+                'api': SHORTLINK_API,
+                'url': SHORTLINK_URL
+            })
+            logging.info("Initialized default shortlink config in database.")
+
+    async def initialize_tutorial_config(self):
+        """Initialize tutorial_config with default TUT_VID if not set."""
+        existing_config = await self.tutorial_config.find_one({'_id': 'config'})
+        if not existing_config:
+            await self.tutorial_config.insert_one({
+                '_id': 'config',
+                'tut_vid': TUT_VID
+            })
+            logging.info("Initialized default tutorial config in database.")
 
     # USER DATA
     async def present_user(self, user_id: int):
@@ -144,12 +173,10 @@ class Rohit:
         channel_ids = [doc['_id'] for doc in channel_docs]
         return channel_ids
     
-    # Get current mode of a channel
     async def get_channel_mode(self, channel_id: int):
         data = await self.fsub_data.find_one({'_id': channel_id})
         return data.get("mode", "off") if data else "off"
 
-    # Set mode of a channel
     async def set_channel_mode(self, channel_id: int, mode: str):
         await self.fsub_data.update_one(
             {'_id': channel_id},
@@ -216,43 +243,75 @@ class Rohit:
 
     async def get_verify_count(self, user_id: int):
         user = await self.sex_data.find_one({'_id': user_id})
-        if user:
-            return user.get('verify_count', 0)
-        return 0
+        return user.get('verify_count', 0) if user else 0
 
     async def reset_all_verify_counts(self):
-        await self.sex_data.update_many(
-            {},
-            {'$set': {'verify_count': 0}} 
-        )
+        await self.sex_data.update_many({}, {'$set': {'verify_count': 0}})
 
     async def get_total_verify_count(self):
-        pipeline = [
-            {"$group": {"_id": None, "total": {"$sum": "$verify_count"}}}
-        ]
+        pipeline = [{"$group": {"_id": None, "total": {"$sum": "$verify_count"}}}]
         result = await self.sex_data.aggregate(pipeline).to_list(length=1)
         return result[0]["total"] if result else 0
 
-    # FORCE PIC MANAGEMENT
-    async def add_force_pic(self, url: str):
-        await self.force_pic_data.insert_one({'url': url})
+    # SHORTLINK CONFIG MANAGEMENT
+    async def set_shortlink_config(self, api: str, url: str):
+        await self.shortlink_config.update_one(
+            {'_id': 'config'},
+            {'$set': {'api': api, 'url': url}},
+            upsert=True
+        )
 
-    async def del_force_pic(self, url: str):
-        await self.force_pic_data.delete_one({'url': url})
+    async def get_shortlink_config(self):
+        config = await self.shortlink_config.find_one({'_id': 'config'})
+        # If no config exists, return defaults from config.py
+        return config if config else {'api': SHORTLINK_API, 'url': SHORTLINK_URL}
 
-    async def get_all_force_pics(self):
-        pics = await self.force_pic_data.find().to_list(length=None)
-        return [pic['url'] for pic in pics]
+    # TUTORIAL VIDEO CONFIG MANAGEMENT
+    async def set_tutorial_video(self, tut_vid: str):
+        await self.tutorial_config.update_one(
+            {'_id': 'config'},
+            {'$set': {'tut_vid': tut_vid}},
+            upsert=True
+        )
 
-    # START PIC MANAGEMENT
-    async def add_start_pic(self, url: str):
-        await self.start_pic_data.insert_one({'url': url})
+    async def get_tutorial_video(self):
+        config = await self.tutorial_config.find_one({'_id': 'config'})
+        return config.get('tut_vid', TUT_VID) if config else TUT_VID
 
-    async def del_start_pic(self, url: str):
-        await self.start_pic_data.delete_one({'url': url})
+    # START PHOTOS MANAGEMENT
+    async def add_start_photo(self, photo_key: str, file_id: str, added_by: int):
+        await self.start_photos.update_one(
+            {'_id': 'photos'},
+            {'$set': {f'photos.{photo_key}': {'file_id': file_id, 'added_by': added_by}}},
+            upsert=True
+        )
 
-    async def get_all_start_pics(self):
-        pics = await self.start_pic_data.find().to_list(length=None)
-        return [pic['url'] for pic in pics]
+    async def get_start_photos(self):
+        photos = await self.start_photos.find_one({'_id': 'photos'})
+        return photos.get('photos', {}) if photos else {}
 
-db = Rohit(DB_URI, DB_NAME)
+    async def delete_start_photo(self, photo_key: str):
+        await self.start_photos.update_one(
+            {'_id': 'photos'},
+            {'$unset': {f'photos.{photo_key}': ""}}
+        )
+
+    # FORCE PHOTOS MANAGEMENT
+    async def add_force_photo(self, photo_key: str, file_id: str, added_by: int):
+        await self.force_photos.update_one(
+            {'_id': 'photos'},
+            {'$set': {f'photos.{photo_key}': {'file_id': file_id, 'added_by': added_by}}},
+            upsert=True
+        )
+
+    async def get_force_photos(self):
+        photos = await self.force_photos.find_one({'_id': 'photos'})
+        return photos.get('photos', {}) if photos else {}
+
+    async def delete_force_photo(self, photo_key: str):
+        await self.force_photos.update_one(
+            {'_id': 'photos'},
+            {'$unset': {f'photos.{photo_key}': ""}}
+        )
+
+db = Sukuna(DB_URI, DB_NAME)
