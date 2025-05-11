@@ -1,5 +1,3 @@
-#(©)CodeFlix_Bots
-#rohit_1888 on Tg #Dont remove this line
 
 import base64
 import re

@@ -5,7 +5,7 @@ import random
 import sys
 import re
 import string 
-import string as rohit
+import string as Sukuna
 import time
 from datetime import datetime, timedelta
 from pyrogram import Client, filters, __version__
@@ -208,8 +208,6 @@ async def start_command(client: Client, message: Message):
 
 
 #=====================================================================================##
-# Don't Remove Credit @CodeFlix_Bots, @rohit_1888
-# Ask Doubt on telegram @CodeflixSupport
 
 
 
