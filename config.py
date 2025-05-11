@@ -94,7 +94,7 @@ USER_REPLY_TEXT = "ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘ
 
 OWNER_TAG = os.environ.get("OWNER_TAG", "Real_Sukuna02")
 UPI_ID = os.environ.get("UPI_ID", "imsukuna@upi")
-QR_PIC = os.environ.get("QR_PIC", "https://img-s-msn-com.akamaized.net/tenant/amp/entityid/BB1o89U8.img?w=768&h=432&m=6")
+QR_PIC = os.environ.get("QR_PIC", "https://i.ibb.co/7Jb0Y61Z/photo-2025-05-08-12-47-46-7502782230834446396.jpg")
 SCREENSHOT_URL = os.environ.get("SCREENSHOT_URL", f"t.me/Real_Sukuna02")
 #--------------------------------------------
 #Time and its price
