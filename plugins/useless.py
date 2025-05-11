@@ -14,6 +14,7 @@ from bot import Bot
 from config import *
 from helper_func import *
 from database.database import *
+from dotenv import *
 
 # Debug logging setup
 import logging
@@ -229,40 +230,79 @@ async def show_start_sub_pics(client: Bot, message: Message):
         await message.reply(f"<b>Failed to fetch Start Sub Pictures:</b> <code>{str(e)}</code>")
 
 # Edit Shortener Settings
-@Bot.on_message(filters.command('shortner') & filters.private & admin)  
+@Bot.on_message(filters.command('shortner') & filters.private & admin)
 async def edit_shortner(client: Bot, message: Message):
     logger.debug(f"Received /shortner command from user {message.from_user.id}")
     if len(message.command) != 3:
-        await message.reply("<b>Usage:</b> <code>/shortner [SHORTLINK_API] [SHORTLINK_URL]</code>")
+        await message.reply("<b>Usage:</b> <code>/shortner [new_shortlink_url] [new_shortlink_api]</code>")
         return
-    new_api = message.command[1]
-    new_url = message.command[2]
+    new_url = message.command[1]
+    new_api = message.command[2]
+    if not new_url.startswith("http"):
+        await message.reply("<b>Invalid Shortlink URL. Please provide a valid URL starting with http or https.</b>")
+        return
     try:
-        # Update environment variables (this change won't persist after a restart unless saved to the environment)
-        os.environ['SHORTLINK_API'] = new_api
+        # Update the SHORTLINK_URL and SHORTLINK_API environment variables at runtime
         os.environ['SHORTLINK_URL'] = new_url
-        # Update the config variables
-        globals()['SHORTLINK_API'] = new_api
-        globals()['SHORTLINK_URL'] = new_url
-        await message.reply(f"<b>Shortener settings updated:</b>\nSHORTLINK_API: <code>{new_api}</code>\nSHORTLINK_URL: <code>{new_url}</code>")
-    except Exception as e:
-        await message.reply(f"<b>Failed to update shortener settings:</b> <code>{str(e)}</code>")
+        os.environ['SHORTLINK_API'] = new_api
 
-# Edit Tutorial Video URL
-@Bot.on_message(filters.command('edittutvid') & filters.private & admin)  
+        # Update the .env file
+        env_file = find_dotenv()
+        if env_file:
+            with open(env_file, 'r') as file:
+                lines = file.readlines()
+            with open(env_file, 'w') as file:
+                found_url = False
+                found_api = False
+                for line in lines:
+                    if line.startswith("SHORTLINK_URL="):
+                        file.write(f"SHORTLINK_URL={new_url}\n")
+                        found_url = True
+                    elif line.startswith("SHORTLINK_API="):
+                        file.write(f"SHORTLINK_API={new_api}\n")
+                        found_api = True
+                    else:
+                        file.write(line)
+                if not found_url:
+                    file.write(f"SHORTLINK_URL={new_url}\n")
+                if not found_api:
+                    file.write(f"SHORTLINK_API={new_api}\n")
+
+        await message.reply(f"<b>Shortlink updated:</b>\nURL: <code>{new_url}</code>\nAPI: <code>{new_api}</code>")
+    except Exception as e:
+        await message.reply(f"<b>Failed to update Shortlink:</b> <code>{str(e)}</code>")
+
+@Bot.on_message(filters.command('edittutvid') & filters.private & admin)
 async def edit_tut_vid(client: Bot, message: Message):
     logger.debug(f"Received /edittutvid command from user {message.from_user.id}")
     if len(message.command) != 2:
-        await message.reply("<b>Usage:</b> <code>/edittutvid [new_url]</code>")
+        await message.reply("<b>Usage:</b> <code>/edittutvid [new_tutorial_url]</code>")
         return
     new_url = message.command[1]
     if not new_url.startswith("http"):
         await message.reply("<b>Invalid URL. Please provide a valid URL starting with http or https.</b>")
         return
     try:
+        # Update the TUT_VID environment variable at runtime
         os.environ['TUT_VID'] = new_url
-        globals()['TUT_VID'] = new_url
-        await message.reply(f"<b>Tutorial Video URL updated:</b> <code>{new_url}</code>")
+
+        # Update the .env file
+        env_file = find_dotenv()
+        if env_file:
+            with open(env_file, 'r') as file:
+                lines = file.readlines()
+            with open(env_file, 'w') as file:
+                found = False
+                for line in lines:
+                    if line.startswith("TUT_VID="):
+                        file.write(f"TUT_VID={new_url}\n")
+                        found = True
+                    else:
+                        file.write(line)
+                if not found:
+                    file.write(f"TUT_VID={new_url}\n")
+
+        await message.reply(f"<b>Tutorial Video URL updated to:</b> <code>{new_url}</code>")
     except Exception as e:
         await message.reply(f"<b>Failed to update Tutorial Video URL:</b> <code>{str(e)}</code>")
 

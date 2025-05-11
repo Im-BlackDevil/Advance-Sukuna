@@ -1,4 +1,3 @@
-
 import motor, asyncio
 import motor.motor_asyncio
 import time
@@ -7,18 +6,11 @@ from config import DB_URI, DB_NAME, SHORTLINK_API, SHORTLINK_URL
 import logging
 from datetime import datetime, timedelta
 from bson import ObjectId
-
-dbclient = pymongo.MongoClient(DB_URI)
-database = dbclient[DB_NAME]
-
-logging.basicConfig(level=logging.INFO)
-
-# Default TUT_VID value
-TUT_VID = "https://t.me/Infinity_0034/9"
+from config import *
 
 default_verify = {
     'is_verified': False,
-    'verified_time': 0,
+    'verified_time': 0,  # Keep as integer
     'verify_token': "",
     'link': ""
 }
@@ -28,7 +20,7 @@ def new_user(id):
         '_id': id,
         'verify_status': {
             'is_verified': False,
-            'verified_time': "",
+            'verified_time': 0,  # Change to integer to match default_verify
             'verify_token': "",
             'link': ""
         }
@@ -50,10 +42,8 @@ class rohit:
         self.fsub_data = self.database['fsub']   
         self.rqst_fsub_data = self.database['request_forcesub']
         self.rqst_fsub_Channel_data = self.database['request_forcesub_channel']
-        self.shortlink_config = self.database['shortlink_config']
-        self.start_pics = self.database['start_pics']  # Use start_pics collection
-        self.force_pics = self.database['force_pics']  # Use force_pics collection
-        self.tutorial_config = self.database['tutorial_config']
+        self.start_pics = self.database['start_pics']  
+        self.force_pics = self.database['force_pics']
 
     async def initialize_shortlink_config(self):
         """Initialize shortlink_config with default values if not set."""
@@ -273,7 +263,7 @@ class rohit:
         config = await self.tutorial_config.find_one({'_id': 'config'})
         return config.get('tut_vid', TUT_VID) if config else TUT_VID
 
-# START PHOTOS MANAGEMENT (Updated to use start_pics collection)
+# START PHOTOS MANAGEMENT
     async def add_start_photo(self, url: str):
         photo_data = {
             "url": url
@@ -282,13 +272,12 @@ class rohit:
 
     async def get_start_photos(self):
         photos = await self.start_pics.find().to_list(length=None)
-        return photos  # Returns a list of documents
+        return photos
 
     async def delete_start_photo(self, photo_id: str):
         await self.start_pics.delete_one({"_id": ObjectId(photo_id)})
 
-
-# FORCE PHOTOS MANAGEMENT (Updated to use force_pics collection)
+    # FORCE PHOTOS MANAGEMENT
     async def add_force_photo(self, url: str):
         photo_data = {
             "url": url
@@ -297,7 +286,7 @@ class rohit:
 
     async def get_force_photos(self):
         photos = await self.force_pics.find().to_list(length=None)
-        return photos  # Returns a list of documents
+        return photos
 
     async def delete_force_photo(self, photo_id: str):
         await self.force_pics.delete_one({"_id": ObjectId(photo_id)})
