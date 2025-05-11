@@ -19,7 +19,6 @@ from helper_func import *
 from database.database import *
 from database.db_premium import *
 
-
 BAN_SUPPORT = f"{BAN_SUPPORT}"
 TUT_VID = f"{TUT_VID}"
 
@@ -40,14 +39,12 @@ async def short_url(client: Client, message: Message, base64_string):
 
         await message.reply_photo(
             photo=SHORTENER_PIC,
-            caption=SHORT_MSG.format(
-            ),
+            caption=SHORT_MSG.format(),
             reply_markup=InlineKeyboardMarkup(buttons),
         )
 
     except IndexError:
         pass
-
 
 @Bot.on_message(filters.command('start') & filters.private)
 async def start_command(client: Client, message: Message):
@@ -79,6 +76,15 @@ async def start_command(client: Client, message: Message):
             await db.add_user(user_id)
         except:
             pass
+
+    # Fetch the latest start sub picture from the database
+    start_photos = await db.get_start_photos()
+    if start_photos:
+        # Sort photos by key (which includes timestamp) to get the latest one
+        latest_photo_key = sorted(start_photos.keys(), reverse=True)[0]
+        start_pic = start_photos[latest_photo_key]['file_id']
+    else:
+        start_pic = START_PIC  # Fallback to default if no photos in DB
 
     # Handle normal message flow
     text = message.text
@@ -182,17 +188,15 @@ async def start_command(client: Client, message: Message):
     else:
         reply_markup = InlineKeyboardMarkup(
             [
-                    [InlineKeyboardButton("• ᴍᴏʀᴇ ᴄʜᴀɴɴᴇʟs •", url="https://t.me/Infinix_Adult")],
-
-    [
-                    InlineKeyboardButton("• ᴀʙᴏᴜᴛ", callback_data = "about"),
-                    InlineKeyboardButton('ʜᴇʟᴘ •', callback_data = "help")
-
-    ]
+                [InlineKeyboardButton("• ᴍᴏʀᴇ ᴄʜᴀɴɴᴇʟs •", url="https://t.me/Infinix_Adult")],
+                [
+                    InlineKeyboardButton("• ᴀʙᴏᴜᴛ", callback_data="about"),
+                    InlineKeyboardButton('ʜᴇʟᴘ •', callback_data="help")
+                ]
             ]
         )
         await message.reply_photo(
-            photo=START_PIC,
+            photo=start_pic,  # Use the dynamically fetched start_pic
             caption=START_MSG.format(
                 first=message.from_user.first_name,
                 last=message.from_user.last_name,
@@ -201,15 +205,11 @@ async def start_command(client: Client, message: Message):
                 id=message.from_user.id
             ),
             reply_markup=reply_markup,
-            message_effect_id=5104841245755180586)  # 🔥
-        
+            message_effect_id=5104841245755180586  # 🔥
+        )
         return
 
-
-
-#=====================================================================================##
-
-
+#=====================================================================================#
 
 # Create a global dictionary to store chat data
 chat_data_cache = {}
@@ -220,6 +220,15 @@ async def not_joined(client: Client, message: Message):
     user_id = message.from_user.id
     buttons = []
     count = 0
+
+    # Fetch the latest force sub picture from the database
+    force_photos = await db.get_force_photos()
+    if force_photos:
+        # Sort photos by key (which includes timestamp) to get the latest one
+        latest_photo_key = sorted(force_photos.keys(), reverse=True)[0]
+        force_pic = force_photos[latest_photo_key]['file_id']
+    else:
+        force_pic = FORCE_PIC  # Fallback to default if no photos in DB
 
     try:
         all_channels = await db.show_channels()  # Should return list of (chat_id, mode) tuples
@@ -245,16 +254,16 @@ async def not_joined(client: Client, message: Message):
                             chat_id=chat_id,
                             creates_join_request=True,
                             expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
-                            )
+                        )
                         link = invite.invite_link
-
                     else:
                         if data.username:
                             link = f"https://t.me/{data.username}"
                         else:
                             invite = await client.create_chat_invite_link(
                                 chat_id=chat_id,
-                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None)
+                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
+                            )
                             link = invite.invite_link
 
                     buttons.append([InlineKeyboardButton(text=name, url=link)])
@@ -280,7 +289,7 @@ async def not_joined(client: Client, message: Message):
             pass
 
         await message.reply_photo(
-            photo=FORCE_PIC,
+            photo=force_pic,  # Use the dynamically fetched force_pic
             caption=FORCE_MSG.format(
                 first=message.from_user.first_name,
                 last=message.from_user.last_name,
