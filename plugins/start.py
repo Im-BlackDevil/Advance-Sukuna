@@ -211,7 +211,7 @@ async def start_command(client: Client, message: Message):
 #=====================================================================================#
 
 # Create a global dictionary to store chat data
-chat_data_cache = {}
+# chat_data_cache = {}
 
 async def not_joined(client: Client, message: Message):
     temp = await message.reply("<b><i>Checking Subscription...</i></b>")
