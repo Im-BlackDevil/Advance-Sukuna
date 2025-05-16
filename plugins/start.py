@@ -220,15 +220,6 @@ async def not_joined(client: Client, message: Message):
     buttons = []
     count = 0
 
-    # Fetch the latest force sub picture from the database
-    force_photos = await db.get_force_photos()
-    if force_photos:
-        # Sort photos by key (which includes timestamp) to get the latest one
-        latest_photo_key = sorted(force_photos.keys(), reverse=True)[0]
-        force_pic = force_photos[latest_photo_key]['file_id']
-    else:
-        force_pic = FORCE_PIC  # Fallback to default if no photos in DB
-
     try:
         all_channels = await db.show_channels()  # Should return list of (chat_id, mode) tuples
         for total, chat_id in enumerate(all_channels, start=1):
@@ -253,16 +244,16 @@ async def not_joined(client: Client, message: Message):
                             chat_id=chat_id,
                             creates_join_request=True,
                             expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
-                        )
+                            )
                         link = invite.invite_link
+
                     else:
                         if data.username:
                             link = f"https://t.me/{data.username}"
                         else:
                             invite = await client.create_chat_invite_link(
                                 chat_id=chat_id,
-                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
-                            )
+                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None)
                             link = invite.invite_link
 
                     buttons.append([InlineKeyboardButton(text=name, url=link)])
@@ -288,7 +279,7 @@ async def not_joined(client: Client, message: Message):
             pass
 
         await message.reply_photo(
-            photo=force_pic,  # Use the dynamically fetched force_pic
+            photo=FORCE_PIC,
             caption=FORCE_MSG.format(
                 first=message.from_user.first_name,
                 last=message.from_user.last_name,
@@ -302,9 +293,101 @@ async def not_joined(client: Client, message: Message):
     except Exception as e:
         print(f"Final Error: {e}")
         await temp.edit(
-            f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Real_Sukuna02</i></b>\n"
+            f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @rohit_1888</i></b>\n"
             f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
         )
+# async def not_joined(client: Client, message: Message):
+#     temp = await message.reply("<b><i>Checking Subscription...</i></b>")
+
+#     user_id = message.from_user.id
+#     buttons = []
+#     count = 0
+
+#     # Fetch the latest force sub picture from the database
+#     force_photos = await db.get_force_photos()
+#     if force_photos:
+#         # Sort photos by key (which includes timestamp) to get the latest one
+#         latest_photo_key = sorted(force_photos.keys(), reverse=True)[0]
+#         force_pic = force_photos[latest_photo_key]['file_id']
+#     else:
+#         force_pic = FORCE_PIC  # Fallback to default if no photos in DB
+
+#     try:
+#         all_channels = await db.show_channels()  # Should return list of (chat_id, mode) tuples
+#         for total, chat_id in enumerate(all_channels, start=1):
+#             mode = await db.get_channel_mode(chat_id)  # fetch mode 
+
+#             await message.reply_chat_action(ChatAction.TYPING)
+
+#             if not await is_sub(client, user_id, chat_id):
+#                 try:
+#                     # Cache chat info
+#                     if chat_id in chat_data_cache:
+#                         data = chat_data_cache[chat_id]
+#                     else:
+#                         data = await client.get_chat(chat_id)
+#                         chat_data_cache[chat_id] = data
+
+#                     name = data.title
+
+#                     # Generate proper invite link based on the mode
+#                     if mode == "on" and not data.username:
+#                         invite = await client.create_chat_invite_link(
+#                             chat_id=chat_id,
+#                             creates_join_request=True,
+#                             expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
+#                         )
+#                         link = invite.invite_link
+#                     else:
+#                         if data.username:
+#                             link = f"https://t.me/{data.username}"
+#                         else:
+#                             invite = await client.create_chat_invite_link(
+#                                 chat_id=chat_id,
+#                                 expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
+#                             )
+#                             link = invite.invite_link
+
+#                     buttons.append([InlineKeyboardButton(text=name, url=link)])
+#                     count += 1
+#                     await temp.edit(f"<b>{'! ' * count}</b>")
+
+#                 except Exception as e:
+#                     print(f"Error with chat {chat_id}: {e}")
+#                     return await temp.edit(
+#                         f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @rohit_1888</i></b>\n"
+#                         f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
+#                     )
+
+#         # Retry Button
+#         try:
+#             buttons.append([
+#                 InlineKeyboardButton(
+#                     text='♻️ Tʀʏ Aɢᴀɪɴ',
+#                     url=f"https://t.me/{client.username}?start={message.command[1]}"
+#                 )
+#             ])
+#         except IndexError:
+#             pass
+
+#         await message.reply_photo(
+#             photo=force_pic,  # Use the dynamically fetched force_pic
+#             caption=FORCE_MSG.format(
+#                 first=message.from_user.first_name,
+#                 last=message.from_user.last_name,
+#                 username=None if not message.from_user.username else '@' + message.from_user.username,
+#                 mention=message.from_user.mention,
+#                 id=message.from_user.id
+#             ),
+#             reply_markup=InlineKeyboardMarkup(buttons),
+#         )
+
+#     except Exception as e:
+#         print(f"Final Error: {e}")
+#         await temp.edit(
+#             f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Real_Sukuna02</i></b>\n"
+#             f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
+#         )
 
 #=====================================================================================##
 
