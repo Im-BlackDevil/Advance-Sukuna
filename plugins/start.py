@@ -290,6 +290,8 @@ async def not_joined(client: Client, message: Message):
             ),
             reply_markup=InlineKeyboardMarkup(buttons),
         )
+        await temp.delete()
+        
     except Exception as e:
         print(f"Final Error: {e}")
         await temp.edit(

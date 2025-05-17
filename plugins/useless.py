@@ -175,7 +175,7 @@ async def add_start_sub_pic(client: Bot, message: Message):
 
 # Delete Force Sub Picture
 @Bot.on_message(filters.command('delforcepic') & filters.private & admin)  
-async def del_force_sub_pic(client: Bot, message: Message):
+async def del_force_pic(client: Bot, message: Message):
     logger.debug(f"Received /delforcepic command from user {message.from_user.id}")
     if len(message.command) != 2:
         await message.reply("<b>Usage:</b> <code>/delforcepic [photo_id]</code>\nUse /showforcepic to get the photo_id.")
@@ -189,7 +189,7 @@ async def del_force_sub_pic(client: Bot, message: Message):
 
 # Delete Start Sub Picture
 @Bot.on_message(filters.command('delstartpic') & filters.private & admin)  
-async def del_start_sub_pic(client: Bot, message: Message):
+async def del_start_pic(client: Bot, message: Message):
     logger.debug(f"Received /delstartpic command from user {message.from_user.id}")
     if len(message.command) != 2:
         await message.reply("<b>Usage:</b> <code>/delstartpic [photo_id]</code>\nUse /showstartpic to get the photo_id.")
@@ -220,7 +220,7 @@ async def show_force_sub_pics(client: Bot, message: Message):
 async def show_start_sub_pics(client: Bot, message: Message):
     logger.debug(f"Received /showstartpic command from user {message.from_user.id}")
     try:
-        pics = await db.get_start_photos()
+        pics = await db.get_start_pics()
         if not pics:
             await message.reply("<b>No Start Sub Pictures found.</b>")
             return
