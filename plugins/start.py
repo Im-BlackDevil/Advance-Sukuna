@@ -213,52 +213,80 @@ async def start_command(client: Client, message: Message):
 # Create a global dictionary to store chat data
 chat_data_cache = {}
 
-async def not_joined(client: Client, message: Message):
-    temp = await message.reply("<b><i>Checking Subscription...</i></b>")
+async def not_joined_ultra_optimized(client: Client, message: Message):
+    """Ultra-optimized version with batch processing"""
     user_id = message.from_user.id
-    buttons = []
-    count = 0
+    
     try:
-        all_channels = await db.show_channels()  # Should return list of (chat_id, mode) tuples
-        for total, chat_id in enumerate(all_channels, start=1):
-            mode = await db.get_channel_mode(chat_id)  # fetch mode 
-            await message.reply_chat_action(ChatAction.TYPING)
-            if not await is_sub(client, user_id, chat_id):
-                try:
-                    # Cache chat info
-                    if chat_id in chat_data_cache:
-                        data = chat_data_cache[chat_id]
+        # Get all channels and modes in one query
+        all_channels = await db.show_channels()
+        
+        if not all_channels:
+            return
+        
+        # Batch process subscription checks
+        subscription_tasks = [
+            is_sub(client, user_id, chat_id) 
+            for chat_id, _ in all_channels
+        ]
+        
+        subscription_results = await asyncio.gather(*subscription_tasks, return_exceptions=True)
+        
+        # Filter non-subscribed channels
+        non_subscribed = [
+            (chat_id, mode) for (chat_id, mode), is_subscribed in zip(all_channels, subscription_results)
+            if not isinstance(is_subscribed, Exception) and not is_subscribed
+        ]
+        
+        # If user is subscribed to all channels, return early
+        if not non_subscribed:
+            return
+        
+        # Batch fetch chat data for non-subscribed channels
+        chat_data_tasks = []
+        for chat_id, mode in non_subscribed:
+            if chat_id not in chat_data_cache:
+                chat_data_tasks.append(client.get_chat(chat_id))
+            else:
+                chat_data_tasks.append(asyncio.create_task(async_return(chat_data_cache[chat_id])))
+        
+        chat_data_results = await asyncio.gather(*chat_data_tasks, return_exceptions=True)
+        
+        # Update cache and build buttons
+        buttons = []
+        for (chat_id, mode), chat_data in zip(non_subscribed, chat_data_results):
+            if isinstance(chat_data, Exception):
+                continue
+                
+            # Update cache
+            chat_data_cache[chat_id] = chat_data
+            
+            # Generate button
+            try:
+                name = chat_data.title
+                
+                if mode == "on" and not chat_data.username:
+                    invite = await client.create_chat_invite_link(
+                        chat_id=chat_id,
+                        creates_join_request=True,
+                        expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
+                    )
+                    link = invite.invite_link
+                else:
+                    if chat_data.username:
+                        link = f"https://t.me/{chat_data.username}"
                     else:
-                        data = await client.get_chat(chat_id)
-                        chat_data_cache[chat_id] = data
-                    name = data.title
-                    # Generate proper invite link based on the mode
-                    if mode == "on" and not data.username:
                         invite = await client.create_chat_invite_link(
                             chat_id=chat_id,
-                            creates_join_request=True,
                             expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
-                            )
+                        )
                         link = invite.invite_link
-                    else:
-                        if data.username:
-                            link = f"https://t.me/{data.username}"
-                        else:
-                            invite = await client.create_chat_invite_link(
-                                chat_id=chat_id,
-                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None)
-                            link = invite.invite_link
-                    buttons.append([InlineKeyboardButton(text=name, url=link)])
-                    count += 1
-                    await temp.edit(f"<b>{'! ' * count}</b>")
-                    
-                except Exception as e:
-                    print(f"Error with chat {chat_id}: {e}")
-                    return await temp.edit(
-                        f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Im_Sukuna02</i></b>\n"
-                        f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
-                    )
-        # Retry Button
+                
+                buttons.append([InlineKeyboardButton(text=name, url=link)])
+            except Exception as e:
+                print(f"Error creating button for chat {chat_id}: {e}")
+        
+        # Add retry button
         try:
             buttons.append([
                 InlineKeyboardButton(
@@ -269,16 +297,11 @@ async def not_joined(client: Client, message: Message):
         except IndexError:
             pass
 
-        # Get random force pic from database
+        # Get force pic (consider caching this too)
         force_pics = await db.get_force_pics()
-        if force_pics and len(force_pics) > 0:
-            # Select a random picture from the database
-            random_pic = random.choice(force_pics)
-            force_pic_url = random_pic["url"]
-        else:
-            # Fallback to default FORCE_PIC if no pics in database
-            force_pic_url = FORCE_PIC
+        force_pic_url = random.choice(force_pics)["url"] if force_pics else FORCE_PIC
 
+        # Send final message
         await message.reply_photo(
             photo=force_pic_url,
             caption=FORCE_MSG.format(
@@ -290,14 +313,17 @@ async def not_joined(client: Client, message: Message):
             ),
             reply_markup=InlineKeyboardMarkup(buttons),
         )
-        await temp.delete()
         
     except Exception as e:
         print(f"Final Error: {e}")
-        await temp.edit(
+        await message.reply(
             f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Im_Sukuna02</i></b>\n"
             f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
         )
+
+async def async_return(value):
+    """Helper function to return cached values as async tasks"""
+    return value
 #=====================================================================================##
 
 @Bot.on_message(filters.command('myplan') & filters.private)
