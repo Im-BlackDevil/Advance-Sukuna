@@ -214,203 +214,98 @@ async def start_command(client: Client, message: Message):
 chat_data_cache = {}
 
 async def not_joined(client: Client, message: Message):
-    # Create a variable to track if the temporary message still exists
-    temp_exists = True
     temp = await message.reply("<b><i>Checking Subscription...</i></b>")
-    
+
+    user_id = message.from_user.id
+    buttons = []
+    count = 0
+
+    # Fetch the latest force sub picture from the database
+    force_pics = await db.get_force_pics()
+    if force_pics:
+        # Sort photos by key (which includes timestamp) to get the latest one
+        latest_photo_key = sorted(force_pics.keys(), reverse=True)[0]
+        force_pic = force_pics[latest_photo_key]['file_id']
+    else:
+        force_pic = FORCE_PIC  # Fallback to default if no photos in DB
+
     try:
-        user_id = message.from_user.id
-        buttons = []
-        count = 0
-        
-        # Use a default force_pic to avoid WebpageMediaEmpty error
-        force_pic = None
-        
-        # Safely fetch the force sub picture from the database
-        try:
-            force_photos = await db.get_force_photos()
-            if force_photos and len(force_photos) > 0:
-                latest_photo_key = sorted(force_photos.keys(), reverse=True)[0]
-                if 'file_id' in force_photos[latest_photo_key]:
-                    force_pic = force_photos[latest_photo_key]['file_id']
-        except Exception as e:
-            print(f"Error fetching force photos: {e}")
-            # We'll handle fallback later if force_pic is None
-        
-        # Try to update the temp message, but don't stop execution if it fails
-        try:
-            if temp_exists:
-                await temp.edit("<b><i>Getting channels...</i></b>")
-        except Exception as edit_error:
-            print(f"Failed to edit message: {edit_error}")
-            temp_exists = False
+        all_channels = await db.show_channels()  # Should return list of (chat_id, mode) tuples
+        for total, chat_id in enumerate(all_channels, start=1):
+            mode = await db.get_channel_mode(chat_id)  # fetch mode 
 
-        # Get all channels
-        all_channels = []
-        try:
-            all_channels = await db.show_channels()
-        except Exception as e:
-            print(f"Error fetching channels: {e}")
-            
-            # Try to update the temp message about the error
-            if temp_exists:
-                try:
-                    await temp.edit("<b><i>Error fetching channels</i></b>")
-                except:
-                    temp_exists = False
+            await message.reply_chat_action(ChatAction.TYPING)
 
-        # If no channels found, handle gracefully
-        if not all_channels:
-            try:
-                if temp_exists:
-                    await temp.delete()
-                    temp_exists = False
-            except:
-                pass
-            
-            # Just send a simple reply that no channels need joining
-            await message.reply("<b>No force subscription channels found.</b>")
-            return
-
-        # Process each channel
-        for chat_id in all_channels:
-            try:
-                # Get channel mode with a default fallback
-                mode = "off"  # Default mode
+            if not await is_sub(client, user_id, chat_id):
                 try:
-                    mode = await db.get_channel_mode(chat_id) or "off"
-                except Exception as mode_error:
-                    print(f"Error getting mode for {chat_id}: {mode_error}")
-                
-                # Check if user is subscribed - continue if this fails
-                try:
-                    is_subscribed = await is_sub(client, user_id, chat_id)
-                    if is_subscribed:
-                        continue  # User is already subscribed, skip to next channel
-                except Exception as sub_error:
-                    print(f"Error checking subscription for {chat_id}: {sub_error}")
-                    continue  # Skip this channel if there's an error
-                
-                # Get chat data
-                try:
+                    # Cache chat info
                     if chat_id in chat_data_cache:
                         data = chat_data_cache[chat_id]
                     else:
                         data = await client.get_chat(chat_id)
                         chat_data_cache[chat_id] = data
-                        
-                    name = data.title or f"Channel {chat_id}"
-                    
-                    # Generate invite link
-                    link = None
-                    if data.username:
-                        link = f"https://t.me/{data.username}"
+
+                    name = data.title
+
+                    # Generate proper invite link based on the mode
+                    if mode == "on" and not data.username:
+                        invite = await client.create_chat_invite_link(
+                            chat_id=chat_id,
+                            creates_join_request=True,
+                            expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
+                        )
+                        link = invite.invite_link
                     else:
-                        # Simple invite link creation with error handling
-                        try:
-                            if mode == "on":  # Join request mode
-                                invite = await client.create_chat_invite_link(
-                                    chat_id=chat_id,
-                                    creates_join_request=True
-                                )
-                            else:  # Regular invite link
-                                invite = await client.create_chat_invite_link(
-                                    chat_id=chat_id
-                                )
+                        if data.username:
+                            link = f"https://t.me/{data.username}"
+                        else:
+                            invite = await client.create_chat_invite_link(
+                                chat_id=chat_id,
+                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
+                            )
                             link = invite.invite_link
-                        except Exception as invite_error:
-                            print(f"Error creating invite link: {invite_error}")
-                            continue  # Skip if we can't create invite link
-                    
-                    if link:  # Only add button if we have a valid link
-                        buttons.append([InlineKeyboardButton(text=name, url=link)])
-                        count += 1
-                except Exception as chat_error:
-                    print(f"Error processing chat {chat_id}: {chat_error}")
-                    continue  # Skip to next channel
-            except Exception as e:
-                print(f"Error processing channel {chat_id}: {e}")
-                continue  # Skip to next channel
 
-        # Delete temporary message regardless of what happened above
-        if temp_exists:
-            try:
-                await temp.delete()
-                temp_exists = False
-            except:
-                pass  # Ignore errors when deleting temp message
+                    buttons.append([InlineKeyboardButton(text=name, url=link)])
+                    count += 1
+                    await temp.edit(f"<b>{'! ' * count}</b>")
 
-        # If no channels need to be joined, just return
-        if count == 0:
-            await message.reply("<b>You have already joined all required channels!</b>")
-            return
-
-        # Add retry button if needed
-        if len(message.command) > 1:
-            try:
-                buttons.append([
-                    InlineKeyboardButton(
-                        text='♻️ Tʀʏ Aɢᴀɪɴ',
-                        url=f"https://t.me/{client.username}?start={message.command[1]}"
+                except Exception as e:
+                    print(f"Error with chat {chat_id}: {e}")
+                    return await temp.edit(
+                        f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @rohit_1888</i></b>\n"
+                        f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
                     )
-                ])
-            except Exception as retry_error:
-                print(f"Error adding retry button: {retry_error}")
 
-        # Build the final message
+        # Retry Button
         try:
-            # Create the caption with safe formatting
-            caption = FORCE_MSG.format(
-                first=message.from_user.first_name or "",
-                last=message.from_user.last_name or "",
-                username=None if not message.from_user.username else '@' + message.from_user.username,
-                mention=message.from_user.mention or f"User {message.from_user.id}",
-                id=message.from_user.id
-            )
-            
-            # First try to send with photo if available
-            if force_pic:
-                try:
-                    await message.reply_photo(
-                        photo=force_pic,
-                        caption=caption,
-                        reply_markup=InlineKeyboardMarkup(buttons),
-                    )
-                    return  # Exit if successful
-                except Exception as photo_error:
-                    print(f"Error sending photo message: {photo_error}")
-                    # Fall through to text-only message
-            
-            # Fallback to text-only message if photo fails or is not available
-            await message.reply(
-                text=caption,
-                reply_markup=InlineKeyboardMarkup(buttons),
-            )
-        except Exception as final_error:
-            print(f"Error in final message: {final_error}")
-            # Last resort fallback message
-            try:
-                await message.reply(
-                    "<b>Please join the required channels to use this bot.</b>",
-                    reply_markup=InlineKeyboardMarkup(buttons) if buttons else None
+            buttons.append([
+                InlineKeyboardButton(
+                    text='♻️ Tʀʏ Aɢᴀɪɴ',
+                    url=f"https://t.me/{client.username}?start={message.command[1]}"
                 )
-            except:
-                # If even that fails, give up silently
-                pass
+            ])
+        except IndexError:
+            pass
 
-    except Exception as main_error:
-        print(f"Main function error: {main_error}")
-        # Try to send an error message, but don't worry if it fails
-        try:
-            # If temp message still exists, try to edit it
-            if temp_exists:
-                try:
-                    await temp.edit("<b>Error checking subscriptions.</b>")
-                except:
-                    # If editing fails, try to send a new message
-                    await message.reply("<b>Error checking subscriptions.</b>")
-        except:
-            pass  # If everything fails, just log the error and continue
+        await message.reply_photo(
+            photo=force_pic,  # Use the dynamically fetched force_pic
+            caption=FORCE_MSG.format(
+                first=message.from_user.first_name,
+                last=message.from_user.last_name,
+                username=None if not message.from_user.username else '@' + message.from_user.username,
+                mention=message.from_user.mention,
+                id=message.from_user.id
+            ),
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
+
+    except Exception as e:
+        print(f"Final Error: {e}")
+        await temp.edit(
+            f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Real_Sukuna02</i></b>\n"
+            f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
+        )
+
 
 #=====================================================================================##
 
