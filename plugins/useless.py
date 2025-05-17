@@ -151,7 +151,7 @@ async def add_force_sub_pic(client: Bot, message: Message):
         await message.reply("<b>Invalid URL. Please provide a valid image URL starting with http or https.</b>")
         return
     try:
-        await db.add_force_photo(url)  # Removed added_by parameter
+        await db.add_force_pic(url)  # Removed added_by parameter
         await message.reply(f"<b>Force Sub Picture added:</b> <code>{url}</code>")
     except Exception as e:
         await message.reply(f"<b>Failed to add Force Sub Picture:</b> <code>{str(e)}</code>")
@@ -182,7 +182,7 @@ async def del_force_sub_pic(client: Bot, message: Message):
         return
     photo_id = message.command[1]
     try:
-        await db.delete_force_photo(photo_id)
+        await db.delete_force_pic(photo_id)
         await message.reply(f"<b>Force Sub Picture deleted:</b> <code>{photo_id}</code>")
     except Exception as e:
         await message.reply(f"<b>Failed to delete Force Sub Picture:</b> <code>{str(e)}</code>")
@@ -206,7 +206,7 @@ async def del_start_sub_pic(client: Bot, message: Message):
 async def show_force_sub_pics(client: Bot, message: Message):
     logger.debug(f"Received /showforcepic command from user {message.from_user.id}")
     try:
-        pics = await db.get_force_photos()
+        pics = await db.get_force_pics()
         if not pics:
             await message.reply("<b>No Force Sub Pictures found.</b>")
             return

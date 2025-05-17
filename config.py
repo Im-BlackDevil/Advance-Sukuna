@@ -11,7 +11,7 @@ API_HASH = os.environ.get("API_HASH", "e6f34a6186963663342b88b88c2b4750") #Your 
 #--------------------------------------------
 
 CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002558171315")) #Your db channel Id 
-OWNER = os.environ.get("OWNER", "Real_Sukuna02") # Owner username without @
+OWNER = os.environ.get("OWNER", "Im_Sukuna02") # Owner username without @
 OWNER_ID = int(os.environ.get("OWNER_ID", "6123108288")) # Owner id
 #--------------------------------------------
 PORT = os.environ.get("PORT", "8001")
@@ -20,7 +20,7 @@ DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://souravagarwal14092007:szX
 DB_NAME = os.environ.get("DATABASE_NAME", "Cluster0")
 #--------------------------------------------
 FSUB_LINK_EXPIRY = int(os.getenv("FSUB_LINK_EXPIRY", "10"))  # 0 means no expiry
-BAN_SUPPORT = os.environ.get("BAN_SUPPORT", "@Real_Sukuna02")
+BAN_SUPPORT = os.environ.get("BAN_SUPPORT", "@Im_Sukuna02")
 TG_BOT_WORKERS = int(os.environ.get("TG_BOT_WORKERS", "200"))
 #--------------------------------------------
 START_PIC = os.environ.get("START_PIC", "https://wallpapercave.com/wp/wp14238410.jpg")
@@ -36,7 +36,7 @@ SHORTENER_PIC = os.environ.get("SHORTENER_PIC", "https://wallpapercave.com/wp/wp
 TUT_VID = "https://t.me/Infinity_0034/9"
 #--------------------------------------------
 HELP_TXT = "<b><blockquote>ᴛʜɪs ɪs ᴀɴ ғɪʟᴇ ᴛᴏ ʟɪɴᴋ ʙᴏᴛ ᴡᴏʀᴋ ғᴏʀ @InFinity_Adult\n\n❏ ʙᴏᴛ ᴄᴏᴍᴍᴀɴᴅs\n├/start : sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ\n├/about : ᴏᴜʀ Iɴғᴏʀᴍᴀᴛɪᴏɴ\n└/help : ʜᴇʟᴘ ʀᴇʟᴀᴛᴇᴅ ʙᴏᴛ\n\n sɪᴍᴘʟʏ ᴄʟɪᴄᴋ ᴏɴ ʟɪɴᴋ ᴀɴᴅ sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ ᴊᴏɪɴ ʙᴏᴛʜ ᴄʜᴀɴɴᴇʟs ᴀɴᴅ ᴛʀʏ ᴀɢᴀɪɴ ᴛʜᴀᴛs ɪᴛ.....!</blockquote></b>"
-ABOUT_TXT = "<b><blockquote>◈ ᴏᴡɴᴇʀ : <a href=t.me/Real_Sukuna02>ɪᴍ•Ꮪᴜ͢ᴋᴜɴᴀ</a>\n◈ ꜰᴏᴜɴᴅᴇʀ ᴏꜰ : <a href=https://t.me/Infinix_Syndicate>ɪɴғɪɴɪx sʏɴᴅɪᴄᴀᴛᴇ</a>\n◈ ᴍᴏᴠɪᴇs ᴄʜᴀɴɴᴇʟ : <a href=https://t.me/Infinix_Movie>ɪɴғɪɴɪx ᴍᴏᴠɪᴇs</a>\n◈ ᴅᴇᴠᴇʟᴏᴘᴇʀ : <a href=https://t.me/ProYato>ʏᴀᴛᴏ</a></blockquote></b>"
+ABOUT_TXT = "<b><blockquote>◈ ᴏᴡɴᴇʀ : <a href=t.me/Im_Sukuna02>ɪᴍ•Ꮪᴜ͢ᴋᴜɴᴀ</a>\n◈ ꜰᴏᴜɴᴅᴇʀ ᴏꜰ : <a href=https://t.me/Infinix_Syndicate>ɪɴғɪɴɪx sʏɴᴅɪᴄᴀᴛᴇ</a>\n◈ ᴍᴏᴠɪᴇs ᴄʜᴀɴɴᴇʟ : <a href=https://t.me/Infinix_Movie>ɪɴғɪɴɪx ᴍᴏᴠɪᴇs</a>\n◈ ᴅᴇᴠᴇʟᴏᴘᴇʀ : <a href=https://t.me/ProYato>ʏᴀᴛᴏ</a></blockquote></b>"
 
 #--------------------------------------------
 START_MSG = os.environ.get("START_MESSAGE", "<b>ʜᴇʟʟᴏ {first}\n\n<blockquote> ɪ ᴀᴍ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ, ɪ ᴄᴀɴ sᴛᴏʀᴇ ᴘʀɪᴠᴀᴛᴇ ғɪʟᴇs ɪɴ sᴘᴇᴄɪғɪᴇᴅ ᴄʜᴀɴɴᴇʟ ᴀɴᴅ ᴏᴛʜᴇʀ ᴜsᴇʀs ᴄᴀɴ ᴀᴄᴄᴇss ɪᴛ ғʀᴏᴍ sᴘᴇᴄɪᴀʟ ʟɪɴᴋ.</blockquote></b>")
@@ -90,10 +90,10 @@ USER_REPLY_TEXT = "ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘ
 
 #==========================(BUY PREMIUM)====================#
 
-OWNER_TAG = os.environ.get("OWNER_TAG", "Real_Sukuna02")
+OWNER_TAG = os.environ.get("OWNER_TAG", "Im_Sukuna02")
 UPI_ID = os.environ.get("UPI_ID", "imsukuna@upi")
 QR_PIC = os.environ.get("QR_PIC", "https://i.ibb.co/7Jb0Y61Z/photo-2025-05-08-12-47-46-7502782230834446396.jpg")
-SCREENSHOT_URL = os.environ.get("SCREENSHOT_URL", f"t.me/Real_Sukuna02")
+SCREENSHOT_URL = os.environ.get("SCREENSHOT_URL", f"t.me/Im_Sukuna02")
 #--------------------------------------------
 #Time and its price
 #7 Days

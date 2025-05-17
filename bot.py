@@ -69,7 +69,7 @@ class Bot(Client):
         """Run the bot."""
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.start())
-        self.LOGGER(__name__).info("Bot is now running. Thanks to @Real_Sukuna02")
+        self.LOGGER(__name__).info("Bot is now running. Thanks to @Im_Sukuna02")
         try:
             loop.run_forever()
         except KeyboardInterrupt:
