@@ -5,6 +5,7 @@ from bot import Bot
 from pyrogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from asyncio import TimeoutError
 from helper_func import encode, get_message_id, admin
+import base64
 
 @Bot.on_message(filters.private & admin & filters.command('batch'))
 async def batch(client: Client, message: Message):
@@ -33,9 +34,9 @@ async def batch(client: Client, message: Message):
             continue
 
 
-    string = f"get-{f_msg_id * abs(client.db_channel.id)}-{s_msg_id * abs(client.db_channel.id)}"
-    hex_string = string.encode().hex()  # Hex encoding
-    link = f"https://t.me/{client.username}?start={hex_string}"
+    string = f"get-{f_msg_id}-{s_msg_id}"
+    base64_string = base64.urlsafe_b64encode(string.encode()).decode()
+    link = f"https://t.me/{client.username}?start={base64_string}"
 
     reply_markup = InlineKeyboardMarkup(
         [[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]]
