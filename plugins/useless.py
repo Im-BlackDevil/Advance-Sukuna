@@ -140,7 +140,7 @@ async def restart_bot(client: Bot, message: Message):
 # NEW COMMANDS FOR IMAGE AND SHORTENER MANAGEMENT
 
 @Bot.on_message(filters.command('addforcepic') & filters.private & admin)  
-async def add_force_pic(client: Bot, message: Message):
+async def add_force_pics(client: Bot, message: Message):
     logger.debug(f"Received /addforcepic command from user {message.from_user.id}")
     if len(message.command) != 2:
         await message.reply("<b>Usage:</b> <code>/addforcepic [image_url]</code>")
@@ -151,7 +151,7 @@ async def add_force_pic(client: Bot, message: Message):
         await message.reply("<b>Invalid URL. Please provide a valid image URL starting with http or https.</b>")
         return
     try:
-        await db.add_force_pic(url)  # Removed added_by parameter
+        await db.add_force_pics(url)  # Removed added_by parameter
         await message.reply(f"<b>Force Sub Picture added:</b> <code>{url}</code>")
     except Exception as e:
         await message.reply(f"<b>Failed to add Force Sub Picture:</b> <code>{str(e)}</code>")
@@ -168,21 +168,21 @@ async def add_start_sub_pic(client: Bot, message: Message):
         await message.reply("<b>Invalid URL. Please provide a valid image URL starting with http or https.</b>")
         return
     try:
-        await db.add_start_photo(url)  # Removed added_by parameter
+        await db.add_start_pics(url)  # Removed added_by parameter
         await message.reply(f"<b>Start Sub Picture added:</b> <code>{url}</code>")
     except Exception as e:
         await message.reply(f"<b>Failed to add Start Sub Picture:</b> <code>{str(e)}</code>")
 
 # Delete Force Sub Picture
 @Bot.on_message(filters.command('delforcepic') & filters.private & admin)  
-async def del_force_pic(client: Bot, message: Message):
+async def del_force_pics(client: Bot, message: Message):
     logger.debug(f"Received /delforcepic command from user {message.from_user.id}")
     if len(message.command) != 2:
         await message.reply("<b>Usage:</b> <code>/delforcepic [photo_id]</code>\nUse /showforcepic to get the photo_id.")
         return
     photo_id = message.command[1]
     try:
-        await db.delete_force_pic(photo_id)
+        await db.delete_force_pics(photo_id)
         await message.reply(f"<b>Force Sub Picture deleted:</b> <code>{photo_id}</code>")
     except Exception as e:
         await message.reply(f"<b>Failed to delete Force Sub Picture:</b> <code>{str(e)}</code>")
@@ -196,7 +196,7 @@ async def del_start_pic(client: Bot, message: Message):
         return
     photo_id = message.command[1]
     try:
-        await db.delete_start_photo(photo_id)
+        await db.delete_start_pics(photo_id)
         await message.reply(f"<b>Start Sub Picture deleted:</b> <code>{photo_id}</code>")
     except Exception as e:
         await message.reply(f"<b>Failed to delete Start Sub Picture:</b> <code>{str(e)}</code>")
