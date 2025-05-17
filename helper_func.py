@@ -1,174 +1,149 @@
-
+from pyrogram import Client, filters
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from bot import Bot
+from pyrogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove
+from asyncio import TimeoutError
+from helper_func import encode, get_message_id, admin
 import base64
-import re
-import asyncio
 import time
-from pyrogram import filters
-from pyrogram.enums import ChatMemberStatus
-from config import *
-from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
-from shortzy import Shortzy
-from pyrogram.errors import FloodWait
-from database.database import *
+import random
+import string
 
+# Function to generate a random padding string
+def generate_padding(length=50):
+    """Generate random padding to make the encoded string longer"""
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
+# Function to add timestamp for uniqueness
+def get_timestamp():
+    """Get current timestamp in milliseconds"""
+    return str(int(time.time() * 1000))
 
-#used for cheking if a user is admin ~Owner also treated as admin level
-async def check_admin(filter, client, update):
-    try:
-        user_id = update.from_user.id       
-        return any([user_id == OWNER_ID, await db.admin_exist(user_id)])
-    except Exception as e:
-        print(f"! Exception in check_admin: {e}")
-        return False
-
-
-async def is_subscribed(client, user_id):
-    channel_ids = await db.show_channels()
-
-    if not channel_ids:
-        return True
-
-    if user_id == OWNER_ID:
-        return True
-
-    for cid in channel_ids:
-        if not await is_sub(client, user_id, cid):
-            # Retry once if join request might be processing
-            mode = await db.get_channel_mode(cid)
-            if mode == "on":
-                await asyncio.sleep(2)  # give time for @on_chat_join_request to process
-                if await is_sub(client, user_id, cid):
-                    continue
-            return False
-
-    return True
-
-
-async def is_sub(client, user_id, channel_id):
-    try:
-        member = await client.get_chat_member(channel_id, user_id)
-        status = member.status
-        #print(f"[SUB] User {user_id} in {channel_id} with status {status}")
-        return status in {
-            ChatMemberStatus.OWNER,
-            ChatMemberStatus.ADMINISTRATOR,
-            ChatMemberStatus.MEMBER
-        }
-
-    except UserNotParticipant:
-        mode = await db.get_channel_mode(channel_id)
-        if mode == "on":
-            exists = await db.req_user_exist(channel_id, user_id)
-            #print(f"[REQ] User {user_id} join request for {channel_id}: {exists}")
-            return exists
-        #print(f"[NOT SUB] User {user_id} not in {channel_id} and mode != on")
-        return False
-
-    except Exception as e:
-        print(f"[!] Error in is_sub(): {e}")
-        return False
-
-
-
-async def encode(string):
-    string_bytes = string.encode("ascii")
-    base64_bytes = base64.urlsafe_b64encode(string_bytes)
-    base64_string = (base64_bytes.decode("ascii")).strip("=")
-    return base64_string
-
-async def decode(base64_string):
-    base64_string = base64_string.strip("=") # links generated before this commit will be having = sign, hence striping them to handle padding errors.
-    base64_bytes = (base64_string + "=" * (-len(base64_string) % 4)).encode("ascii")
-    string_bytes = base64.urlsafe_b64decode(base64_bytes) 
-    string = string_bytes.decode("utf-8")
-    return string
-
-async def get_messages(client, message_ids):
-    messages = []
-    total_messages = 0
-    while total_messages != len(message_ids):
-        temb_ids = message_ids[total_messages:total_messages+200]
+@Bot.on_message(filters.private & admin & filters.command('batch'))
+async def batch(client: Client, message: Message):
+    while True:
         try:
-            msgs = await client.get_messages(
-                chat_id=client.db_channel.id,
-                message_ids=temb_ids
-            )
-        except FloodWait as e:
-            await asyncio.sleep(e.x)
-            msgs = await client.get_messages(
-                chat_id=client.db_channel.id,
-                message_ids=temb_ids
-            )
+            first_message = await client.ask(text = "Forward the First Message from DB Channel (with Quotes)..\n\nor Send the DB Channel Post Link", chat_id = message.from_user.id, filters=(filters.forwarded | (filters.text & ~filters.forwarded)), timeout=60)
         except:
-            pass
-        total_messages += len(temb_ids)
-        messages.extend(msgs)
-    return messages
-
-async def get_message_id(client, message):
-    if message.forward_from_chat:
-        if message.forward_from_chat.id == client.db_channel.id:
-            return message.forward_from_message_id
-        else:
-            return 0
-    elif message.forward_sender_name:
-        return 0
-    elif message.text:
-        pattern = "https://t.me/(?:c/)?(.*)/(\d+)"
-        matches = re.match(pattern,message.text)
-        if not matches:
-            return 0
-        channel_id = matches.group(1)
-        msg_id = int(matches.group(2))
-        if channel_id.isdigit():
-            if f"-100{channel_id}" == str(client.db_channel.id):
-                return msg_id
-        else:
-            if channel_id == client.db_channel.username:
-                return msg_id
-    else:
-        return 0
-
-
-def get_readable_time(seconds: int) -> str:
-    count = 0
-    up_time = ""
-    time_list = []
-    time_suffix_list = ["s", "m", "h", "days"]
-    while count < 4:
-        count += 1
-        remainder, result = divmod(seconds, 60) if count < 3 else divmod(seconds, 24)
-        if seconds == 0 and remainder == 0:
+            return
+        f_msg_id = await get_message_id(client, first_message)
+        if f_msg_id:
             break
-        time_list.append(int(result))
-        seconds = int(remainder)
-    hmm = len(time_list)
-    for x in range(hmm):
-        time_list[x] = str(time_list[x]) + time_suffix_list[x]
-    if len(time_list) == 4:
-        up_time += f"{time_list.pop()}, "
-    time_list.reverse()
-    up_time += ":".join(time_list)
-    return up_time
+        else:
+            await first_message.reply("❌ Error\n\nthis Forwarded Post is not from my DB Channel or this Link is taken from DB Channel", quote = True)
+            continue
+
+    while True:
+        try:
+            second_message = await client.ask(text = "Forward the Last Message from DB Channel (with Quotes)..\nor Send the DB Channel Post link", chat_id = message.from_user.id, filters=(filters.forwarded | (filters.text & ~filters.forwarded)), timeout=60)
+        except:
+            return
+        s_msg_id = await get_message_id(client, second_message)
+        if s_msg_id:
+            break
+        else:
+            await second_message.reply("❌ Error\n\nthis Forwarded Post is not from my DB Channel or this Link is taken from DB Channel", quote = True)
+            continue
+
+    # Method 1: Add timestamp and padding for longer strings
+    timestamp = get_timestamp()
+    padding = generate_padding(30)  # Add 30 random characters
+    string = f"get-{f_msg_id * abs(client.db_channel.id)}-{s_msg_id * abs(client.db_channel.id)}-{timestamp}-{padding}"
+    
+    # Method 2: Alternative - multiply IDs by larger numbers
+    # multiplier = 1000000  # Make this larger for longer strings
+    # string = f"get-{f_msg_id * abs(client.db_channel.id) * multiplier}-{s_msg_id * abs(client.db_channel.id) * multiplier}"
+    
+    # Method 3: Alternative - add more metadata
+    # user_id = message.from_user.id
+    # chat_id = abs(message.chat.id)
+    # string = f"get-{f_msg_id * abs(client.db_channel.id)}-{s_msg_id * abs(client.db_channel.id)}-{user_id}-{chat_id}-{timestamp}"
+    
+    base64_string = await encode(string)
+    link = f"https://t.me/{client.username}?start={base64_string}"
+    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
+    await second_message.reply_text(f"<b>Here is your link</b>\n\n{link}", quote=True, reply_markup=reply_markup)
 
 
-def get_exp_time(seconds):
-    periods = [('days', 86400), ('hours', 3600), ('mins', 60), ('secs', 1)]
-    result = ''
-    for period_name, period_seconds in periods:
-        if seconds >= period_seconds:
-            period_value, seconds = divmod(seconds, period_seconds)
-            result += f'{int(period_value)} {period_name}'
-    return result
+@Bot.on_message(filters.private & admin & filters.command('genlink'))
+async def link_generator(client: Client, message: Message):
+    while True:
+        try:
+            channel_message = await client.ask(text = "Forward Message from the DB Channel (with Quotes)..\nor Send the DB Channel Post link", chat_id = message.from_user.id, filters=(filters.forwarded | (filters.text & ~filters.forwarded)), timeout=60)
+        except:
+            return
+        msg_id = await get_message_id(client, channel_message)
+        if msg_id:
+            break
+        else:
+            await channel_message.reply("❌ Error\n\nthis Forwarded Post is not from my DB Channel or this Link is not taken from DB Channel", quote = True)
+            continue
+
+    # Add timestamp and padding for longer strings
+    timestamp = get_timestamp()
+    padding = generate_padding(40)  # Add 40 random characters for single messages
+    string = f"get-{msg_id * abs(client.db_channel.id)}-{timestamp}-{padding}"
+    
+    # Alternative methods (uncomment to use):
+    # Method 2: Use larger multiplier
+    # multiplier = 10000000
+    # string = f"get-{msg_id * abs(client.db_channel.id) * multiplier}"
+    
+    # Method 3: Add user and chat info
+    # user_id = message.from_user.id
+    # string = f"get-{msg_id * abs(client.db_channel.id)}-{user_id}-{timestamp}"
+    
+    base64_string = await encode(string)
+    link = f"https://t.me/{client.username}?start={base64_string}"
+    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
+    await channel_message.reply_text(f"<b>Here is your link</b>\n\n{link}", quote=True, reply_markup=reply_markup)
 
 
+@Bot.on_message(filters.private & admin & filters.command("custom_batch"))
+async def custom_batch(client: Client, message: Message):
+    collected = []
+    STOP_KEYBOARD = ReplyKeyboardMarkup([["STOP"]], resize_keyboard=True)
 
-async def get_shortlink(url, api, link):
-    shortzy = Shortzy(api_key=api, base_site=url)
-    link = await shortzy.convert(link)
-    return link
+    await message.reply("Send all messages you want to include in batch.\n\nPress STOP when you're done.", reply_markup=STOP_KEYBOARD)
 
+    while True:
+        try:
+            user_msg = await client.ask(
+                chat_id=message.chat.id,
+                text="Waiting for files/messages...\nPress STOP to finish.",
+                timeout=60
+            )
+        except asyncio.TimeoutError:
+            break
 
-subscribed = filters.create(is_subscribed)
-admin = filters.create(check_admin)
+        if user_msg.text and user_msg.text.strip().upper() == "STOP":
+            break
+
+        try:
+            sent = await user_msg.copy(client.db_channel.id, disable_notification=True)
+            collected.append(sent.id)
+        except Exception as e:
+            await message.reply(f"❌ Failed to store a message:\n<code>{e}</code>")
+            continue
+
+    await message.reply("✅ Batch collection complete.", reply_markup=ReplyKeyboardRemove())
+
+    if not collected:
+        await message.reply("❌ No messages were added to batch.")
+        return
+
+    # Add timestamp and padding for longer custom batch strings
+    timestamp = get_timestamp()
+    padding = generate_padding(35)
+    start_id = collected[0] * abs(client.db_channel.id)
+    end_id = collected[-1] * abs(client.db_channel.id)
+    
+    # Include number of files in the batch and other metadata
+    file_count = len(collected)
+    string = f"get-{start_id}-{end_id}-{file_count}-{timestamp}-{padding}"
+    
+    base64_string = await encode(string)
+    link = f"https://t.me/{client.username}?start={base64_string}"
+
+    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
+    await message.reply(f"<b>Here is your custom batch link:</b>\n\n{link}", reply_markup=reply_markup)
