@@ -213,7 +213,7 @@ async def start_command(client: Client, message: Message):
 # Create a global dictionary to store chat data
 chat_data_cache = {}
 
-async def not_joined_ultra_optimized(client: Client, message: Message):
+async def not_joined(client: Client, message: Message):
     """Ultra-optimized version with batch processing"""
     user_id = message.from_user.id
     
