@@ -214,27 +214,58 @@ async def start_command(client: Client, message: Message):
 chat_data_cache = {}
 
 async def not_joined(client: Client, message: Message):
-    """Ultra-optimized version with batch processing"""
+    """Ultra-optimized version with batch processing - Fixed version"""
     user_id = message.from_user.id
     
     try:
-        # Get all channels and modes in one query
-        all_channels = await db.show_channels()
+        # Get all channels from database
+        all_channels_data = await db.show_channels()
         
-        if not all_channels:
+        if not all_channels_data:
+            return
+        
+        # Handle different return formats from db.show_channels()
+        channels_to_process = []
+        
+        # Check if the data is a list of tuples or just chat_ids
+        for item in all_channels_data:
+            if isinstance(item, tuple) and len(item) >= 2:
+                # Data format: (chat_id, mode)
+                chat_id, mode = item[0], item[1]
+                channels_to_process.append((chat_id, mode))
+            elif isinstance(item, (int, str)):
+                # Data format: just chat_id, need to fetch mode separately
+                chat_id = int(item)
+                mode = await db.get_channel_mode(chat_id)
+                channels_to_process.append((chat_id, mode))
+            else:
+                # Try to handle as dict or other format
+                try:
+                    if hasattr(item, 'get'):
+                        chat_id = item.get('chat_id') or item.get('id')
+                        mode = item.get('mode', 'off')
+                    else:
+                        chat_id = int(item)
+                        mode = await db.get_channel_mode(chat_id)
+                    channels_to_process.append((chat_id, mode))
+                except Exception as e:
+                    print(f"Error processing channel item {item}: {e}")
+                    continue
+        
+        if not channels_to_process:
             return
         
         # Batch process subscription checks
         subscription_tasks = [
             is_sub(client, user_id, chat_id) 
-            for chat_id, _ in all_channels
+            for chat_id, _ in channels_to_process
         ]
         
         subscription_results = await asyncio.gather(*subscription_tasks, return_exceptions=True)
         
         # Filter non-subscribed channels
         non_subscribed = [
-            (chat_id, mode) for (chat_id, mode), is_subscribed in zip(all_channels, subscription_results)
+            (chat_id, mode) for (chat_id, mode), is_subscribed in zip(channels_to_process, subscription_results)
             if not isinstance(is_subscribed, Exception) and not is_subscribed
         ]
         
@@ -256,6 +287,7 @@ async def not_joined(client: Client, message: Message):
         buttons = []
         for (chat_id, mode), chat_data in zip(non_subscribed, chat_data_results):
             if isinstance(chat_data, Exception):
+                print(f"Error fetching chat data for {chat_id}: {chat_data}")
                 continue
                 
             # Update cache
@@ -294,7 +326,7 @@ async def not_joined(client: Client, message: Message):
                     url=f"https://t.me/{client.username}?start={message.command[1]}"
                 )
             ])
-        except IndexError:
+        except (IndexError, AttributeError):
             pass
 
         # Get force pic (consider caching this too)
@@ -315,7 +347,7 @@ async def not_joined(client: Client, message: Message):
         )
         
     except Exception as e:
-        print(f"Final Error: {e}")
+        print(f"Final Error in not_joined: {e}")
         await message.reply(
             f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Im_Sukuna02</i></b>\n"
             f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
@@ -324,6 +356,109 @@ async def not_joined(client: Client, message: Message):
 async def async_return(value):
     """Helper function to return cached values as async tasks"""
     return value
+
+# Alternative simpler version if the above still has issues
+async def not_joined_simple(client: Client, message: Message):
+    """Simpler version that handles database format issues"""
+    user_id = message.from_user.id
+    buttons = []
+    
+    try:
+        # Get all channels from database
+        all_channels_data = await db.show_channels()
+        
+        if not all_channels_data:
+            return
+        
+        # Process each channel individually to avoid unpacking errors
+        for item in all_channels_data:
+            try:
+                # Handle different possible formats
+                if isinstance(item, tuple):
+                    chat_id = item[0]
+                    mode = item[1] if len(item) > 1 else await db.get_channel_mode(chat_id)
+                elif isinstance(item, (int, str)):
+                    chat_id = int(item)
+                    mode = await db.get_channel_mode(chat_id)
+                else:
+                    print(f"Unexpected item format: {item}")
+                    continue
+                
+                # Check subscription
+                if await is_sub(client, user_id, chat_id):
+                    continue
+                
+                # Get chat data from cache or fetch it
+                if chat_id in chat_data_cache:
+                    data = chat_data_cache[chat_id]
+                else:
+                    data = await client.get_chat(chat_id)
+                    chat_data_cache[chat_id] = data
+                
+                name = data.title
+                
+                # Generate proper invite link based on the mode
+                if mode == "on" and not data.username:
+                    invite = await client.create_chat_invite_link(
+                        chat_id=chat_id,
+                        creates_join_request=True,
+                        expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
+                    )
+                    link = invite.invite_link
+                else:
+                    if data.username:
+                        link = f"https://t.me/{data.username}"
+                    else:
+                        invite = await client.create_chat_invite_link(
+                            chat_id=chat_id,
+                            expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
+                        )
+                        link = invite.invite_link
+                
+                buttons.append([InlineKeyboardButton(text=name, url=link)])
+                
+            except Exception as e:
+                print(f"Error processing channel {item}: {e}")
+                continue
+        
+        # If user is subscribed to all channels, return early
+        if not buttons:
+            return
+        
+        # Add retry button
+        try:
+            buttons.append([
+                InlineKeyboardButton(
+                    text='♻️ Tʀʏ Aɢᴀɪɴ',
+                    url=f"https://t.me/{client.username}?start={message.command[1]}"
+                )
+            ])
+        except (IndexError, AttributeError):
+            pass
+
+        # Get force pic
+        force_pics = await db.get_force_pics()
+        force_pic_url = random.choice(force_pics)["url"] if force_pics else FORCE_PIC
+
+        # Send final message
+        await message.reply_photo(
+            photo=force_pic_url,
+            caption=FORCE_MSG.format(
+                first=message.from_user.first_name,
+                last=message.from_user.last_name,
+                username=None if not message.from_user.username else '@' + message.from_user.username,
+                mention=message.from_user.mention,
+                id=message.from_user.id
+            ),
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
+        
+    except Exception as e:
+        print(f"Final Error in not_joined_simple: {e}")
+        await message.reply(
+            f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Im_Sukuna02</i></b>\n"
+            f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
+        )
 #=====================================================================================##
 
 @Bot.on_message(filters.command('myplan') & filters.private)
