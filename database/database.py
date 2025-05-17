@@ -264,21 +264,21 @@ class rohit:
         return config.get('tut_vid', TUT_VID) if config else TUT_VID
 
 # START PHOTOS MANAGEMENT
-    async def add_start_photo(self, url: str):
+    async def add_start_pics(self, url: str):
         photo_data = {
             "url": url
         }
         await self.start_pics.insert_one(photo_data)
 
-    async def get_start_photos(self):
+    async def get_start_pics(self):
         photos = await self.start_pics.find().to_list(length=None)
         return photos
 
-    async def delete_start_photo(self, photo_id: str):
+    async def delete_start_pics(self, photo_id: str):
         await self.start_pics.delete_one({"_id": ObjectId(photo_id)})
 
     # FORCE PHOTOS MANAGEMENT
-    async def add_force_photo(self, url: str):
+    async def add_force_pics(self, url: str):
         photo_data = {
             "url": url
         }
@@ -288,16 +288,9 @@ class rohit:
         photos = await self.force_pics.find().to_list(length=None)
         return photos
 
-    async def delete_force_photo(self, photo_id: str):
+    async def delete_force_pics(self, photo_id: str):
         await self.force_pics.delete_one({"_id": ObjectId(photo_id)})
-
-# async def get_force_pics(self):
-#     """
-#     Get all force subscription pictures from the force_pics collection.
-#     Returns a list of documents with the picture URLs.
-#     """
-#     pics = await self.force_pics.find().to_list(length=None)
-#     return pics        
+    
 
 
 db = rohit(DB_URI, DB_NAME)

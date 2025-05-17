@@ -78,10 +78,10 @@ async def start_command(client: Client, message: Message):
             pass
 
     # Fetch all start sub pictures from the database
-    start_photos = await db.get_start_photos()
-    if start_photos:
+    start_pics = await db.get_start_pics()
+    if start_pics:
         # Randomly select one image from the list
-        start_pic = random.choice(start_photos)['url']
+        start_pic = random.choice(start_pics)['url']
     else:
         start_pic = START_PIC  # Fallback to default if no photos in DB
 
