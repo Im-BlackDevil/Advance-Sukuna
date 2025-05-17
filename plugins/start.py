@@ -103,24 +103,65 @@ async def start_command(client: Client, message: Message):
         except Exception as e:
             print(f"Error processing start payload: {e}")
 
-        string = await decode(base64_string)
-        argument = string.split("-")
-
-        ids = []
-        if len(argument) == 3:
-            try:
-                start = int(int(argument[1]) / abs(client.db_channel.id))
-                end = int(int(argument[2]) / abs(client.db_channel.id))
-                ids = range(start, end + 1) if start <= end else list(range(start, end - 1, -1))
-            except Exception as e:
-                print(f"Error decoding IDs: {e}")
+        # NEW DECODING LOGIC - Updated to handle longer encoded strings
+        try:
+            string = await decode(base64_string)
+            
+            # Use the new extract_message_ids function to get the actual message IDs
+            from helper_func import extract_message_ids
+            raw_ids = extract_message_ids(string)
+            
+            if not raw_ids:
+                print(f"Could not extract message IDs from: {string}")
+                await message.reply_text("❌ Invalid link format!")
                 return
-
-        elif len(argument) == 2:
+            
+            # Convert the raw IDs back to actual message IDs
+            ids = []
+            if len(raw_ids) == 1:
+                # Single message
+                ids = [int(raw_ids[0] / abs(client.db_channel.id))]
+            elif len(raw_ids) == 2:
+                # Batch of messages
+                start = int(raw_ids[0] / abs(client.db_channel.id))
+                end = int(raw_ids[1] / abs(client.db_channel.id))
+                ids = range(start, end + 1) if start <= end else list(range(start, end - 1, -1))
+            else:
+                print(f"Unexpected number of IDs: {raw_ids}")
+                await message.reply_text("❌ Invalid link format!")
+                return
+                
+        except Exception as e:
+            print(f"Error in new decoding logic: {e}")
+            
+            # FALLBACK TO OLD LOGIC for backward compatibility
             try:
-                ids = [int(int(argument[1]) / abs(client.db_channel.id))]
-            except Exception as e:
-                print(f"Error decoding ID: {e}")
+                string = await decode(base64_string)
+                argument = string.split("-")
+
+                ids = []
+                if len(argument) == 3:
+                    try:
+                        start = int(int(argument[1]) / abs(client.db_channel.id))
+                        end = int(int(argument[2]) / abs(client.db_channel.id))
+                        ids = range(start, end + 1) if start <= end else list(range(start, end - 1, -1))
+                    except Exception as e:
+                        print(f"Error decoding IDs (old format): {e}")
+                        return
+
+                elif len(argument) == 2:
+                    try:
+                        ids = [int(int(argument[1]) / abs(client.db_channel.id))]
+                    except Exception as e:
+                        print(f"Error decoding ID (old format): {e}")
+                        return
+                else:
+                    print(f"Unrecognized format: {string}")
+                    await message.reply_text("❌ Invalid link format!")
+                    return
+            except Exception as fallback_error:
+                print(f"Both new and old decoding failed: {fallback_error}")
+                await message.reply_text("❌ Failed to process the link!")
                 return
 
         temp_msg = await message.reply("<b>Please wait...</b>")
@@ -207,7 +248,7 @@ async def start_command(client: Client, message: Message):
             message_effect_id=5104841245755180586  # 🔥
         )
         return
-
+    
 #=====================================================================================#
 
 # Create a global dictionary to store chat data
