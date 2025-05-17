@@ -140,7 +140,7 @@ async def restart_bot(client: Bot, message: Message):
 # NEW COMMANDS FOR IMAGE AND SHORTENER MANAGEMENT
 
 @Bot.on_message(filters.command('addforcepic') & filters.private & admin)  
-async def add_force_sub_pic(client: Bot, message: Message):
+async def add_force_pic(client: Bot, message: Message):
     logger.debug(f"Received /addforcepic command from user {message.from_user.id}")
     if len(message.command) != 2:
         await message.reply("<b>Usage:</b> <code>/addforcepic [image_url]</code>")
@@ -203,7 +203,7 @@ async def del_start_pic(client: Bot, message: Message):
 
 # Show All Force Sub Pictures
 @Bot.on_message(filters.command('showforcepic') & filters.private & admin)  
-async def show_force_sub_pics(client: Bot, message: Message):
+async def show_force_pics(client: Bot, message: Message):
     logger.debug(f"Received /showforcepic command from user {message.from_user.id}")
     try:
         pics = await db.get_force_pics()
