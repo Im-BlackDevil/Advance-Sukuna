@@ -215,66 +215,30 @@ chat_data_cache = {}
 
 async def not_joined(client: Client, message: Message):
     temp = await message.reply("<b><i>Checking Subscription...</i></b>")
-    
+    user_id = message.from_user.id
+    buttons = []
+    count = 0
     try:
-        user_id = message.from_user.id
-        buttons = []
-        count = 0
-        
-        # Fetch the latest force sub picture from the database
-        try:
-            # The collection is named force_pics as shown in MongoDB
-            # We need to add or update this method in the database.py class
-            force_pics = await db.get_force_pics()
-            if force_pics and len(force_pics) > 0:
-                # Select a random force pic from the available ones
-                force_pic = random.choice(force_pics)['url']
-            else:
-                force_pic = FORCE_PIC  # Fallback to default if no photos in DB
-                
-            await temp.edit("<b><i>Getting channels...</i></b>")
-        except Exception as e:
-            print(f"Error fetching force photos: {e}")
-            force_pic = FORCE_PIC  # Fallback to default
-            await temp.edit("<b><i>Using default force pic...</i></b>")
-
-        # Get all channels
-        try:
-            all_channels = await db.show_channels()
-            if not all_channels:
-                await temp.edit("<b><i>No force subscription channels found.</i></b>")
-                return
-                
-            await temp.edit(f"<b><i>Checking {len(all_channels)} channels...</i></b>")
-        except Exception as e:
-            print(f"Error fetching channels: {e}")
-            await temp.edit(f"<b><i>Error fetching channels: {str(e)}</i></b>")
-            return
-
-        for chat_id in all_channels:
-            try:
-                # Get channel mode
-                mode = await db.get_channel_mode(chat_id)
-                
-                # Check if user is subscribed
-                is_subscribed = await is_sub(client, user_id, chat_id)
-                if not is_subscribed:
-                    # Try to get chat data from cache or fetch it
+        all_channels = await db.show_channels()  # Should return list of (chat_id, mode) tuples
+        for total, chat_id in enumerate(all_channels, start=1):
+            mode = await db.get_channel_mode(chat_id)  # fetch mode 
+            await message.reply_chat_action(ChatAction.TYPING)
+            if not await is_sub(client, user_id, chat_id):
+                try:
+                    # Cache chat info
                     if chat_id in chat_data_cache:
                         data = chat_data_cache[chat_id]
                     else:
                         data = await client.get_chat(chat_id)
                         chat_data_cache[chat_id] = data
-
                     name = data.title
-
                     # Generate proper invite link based on the mode
                     if mode == "on" and not data.username:
                         invite = await client.create_chat_invite_link(
                             chat_id=chat_id,
                             creates_join_request=True,
                             expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
-                        )
+                            )
                         link = invite.invite_link
                     else:
                         if data.username:
@@ -282,59 +246,55 @@ async def not_joined(client: Client, message: Message):
                         else:
                             invite = await client.create_chat_invite_link(
                                 chat_id=chat_id,
-                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
-                            )
+                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None)
                             link = invite.invite_link
-
                     buttons.append([InlineKeyboardButton(text=name, url=link)])
                     count += 1
-                    await temp.edit(f"<b><i>Found {count} channel(s) to join</i></b>")
-            except Exception as e:
-                print(f"Error processing channel {chat_id}: {e}")
-                # Continue with other channels instead of stopping
-
-        # If no channels need to be joined
-        if count == 0:
-            await temp.delete()
-            return
-
-        # Add retry button
-        try:
-            if len(message.command) > 1:
-                buttons.append([
-                    InlineKeyboardButton(
-                        text='♻️ Tʀʏ Aɢᴀɪɴ',
-                        url=f"https://t.me/{client.username}?start={message.command[1]}"
+                    await temp.edit(f"<b>{'! ' * count}</b>")
+                except Exception as e:
+                    print(f"Error with chat {chat_id}: {e}")
+                    return await temp.edit(
+                        f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @rohit_1888</i></b>\n"
+                        f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
                     )
-                ])
-        except Exception as e:
-            print(f"Error adding retry button: {e}")
-
-        # Send final message with photo
+        # Retry Button
         try:
-            await temp.delete()
-            await message.reply_photo(
-                photo=force_pic,
-                caption=FORCE_MSG.format(
-                    first=message.from_user.first_name,
-                    last=message.from_user.last_name or "",
-                    username=None if not message.from_user.username else '@' + message.from_user.username,
-                    mention=message.from_user.mention,
-                    id=message.from_user.id
-                ),
-                reply_markup=InlineKeyboardMarkup(buttons),
-            )
-        except Exception as e:
-            print(f"Error sending final message: {e}")
-            await temp.edit(f"<b><i>Error sending final message: {str(e)}</i></b>")
+            buttons.append([
+                InlineKeyboardButton(
+                    text='♻️ Tʀʏ Aɢᴀɪɴ',
+                    url=f"https://t.me/{client.username}?start={message.command[1]}"
+                )
+            ])
+        except IndexError:
+            pass
 
-    except Exception as main_error:
-        print(f"Main function error: {main_error}")
-        await temp.edit(
-            f"<b><i>! Error in subscription checking. Contact developer @Real_Sukuna02</i></b>\n"
-            f"<blockquote expandable><b>Reason:</b> {str(main_error)}</blockquote>"
+        # Get random force pic from database
+        force_pics = await db.get_force_pics()
+        if force_pics and len(force_pics) > 0:
+            # Select a random picture from the database
+            random_pic = random.choice(force_pics)
+            force_pic_url = random_pic["url"]
+        else:
+            # Fallback to default FORCE_PIC if no pics in database
+            force_pic_url = FORCE_PIC
+
+        await message.reply_photo(
+            photo=force_pic_url,
+            caption=FORCE_MSG.format(
+                first=message.from_user.first_name,
+                last=message.from_user.last_name,
+                username=None if not message.from_user.username else '@' + message.from_user.username,
+                mention=message.from_user.mention,
+                id=message.from_user.id
+            ),
+            reply_markup=InlineKeyboardMarkup(buttons),
         )
-
+    except Exception as e:
+        print(f"Final Error: {e}")
+        await temp.edit(
+            f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Real_Sukuna02</i></b>\n"
+            f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
+        )
 #=====================================================================================##
 
 @Bot.on_message(filters.command('myplan') & filters.private)
