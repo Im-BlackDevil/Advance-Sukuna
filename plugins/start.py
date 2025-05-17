@@ -223,11 +223,12 @@ async def not_joined(client: Client, message: Message):
         
         # Fetch the latest force sub picture from the database
         try:
+            # The collection is named force_pics as shown in MongoDB
+            # We need to add or update this method in the database.py class
             force_pics = await db.get_force_pics()
-            if force_pics and force_pics.keys():
-                # Sort photos by key (which includes timestamp) to get the latest one
-                latest_photo_key = sorted(force_pics.keys(), reverse=True)[0]
-                force_pic = force_pics[latest_photo_key]['file_id']
+            if force_pics and len(force_pics) > 0:
+                # Select a random force pic from the available ones
+                force_pic = random.choice(force_pics)['url']
             else:
                 force_pic = FORCE_PIC  # Fallback to default if no photos in DB
                 
@@ -330,7 +331,7 @@ async def not_joined(client: Client, message: Message):
     except Exception as main_error:
         print(f"Main function error: {main_error}")
         await temp.edit(
-            f"<b><i>! Error in subscription checking. Contact developer @rohit_1888</i></b>\n"
+            f"<b><i>! Error in subscription checking. Contact developer @Real_Sukuna02</i></b>\n"
             f"<blockquote expandable><b>Reason:</b> {str(main_error)}</blockquote>"
         )
 

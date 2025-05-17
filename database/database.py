@@ -284,12 +284,20 @@ class rohit:
         }
         await self.force_pics.insert_one(photo_data)
 
-    async def get_force_photos(self):
+    async def get_force_pics(self):
         photos = await self.force_pics.find().to_list(length=None)
         return photos
 
     async def delete_force_photo(self, photo_id: str):
         await self.force_pics.delete_one({"_id": ObjectId(photo_id)})
+
+# async def get_force_pics(self):
+#     """
+#     Get all force subscription pictures from the force_pics collection.
+#     Returns a list of documents with the picture URLs.
+#     """
+#     pics = await self.force_pics.find().to_list(length=None)
+#     return pics        
 
 
 db = rohit(DB_URI, DB_NAME)
