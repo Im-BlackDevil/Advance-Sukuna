@@ -217,6 +217,9 @@ async def not_joined(client: Client, message: Message):
     """Ultra-optimized version with batch processing - Fixed version"""
     user_id = message.from_user.id
     
+    # Send checking subscription message
+    temp_msg = await message.reply("<b><i>Checking Subscription...</i></b>")
+    
     try:
         # Get all channels from database
         all_channels_data = await db.show_channels()
@@ -269,8 +272,9 @@ async def not_joined(client: Client, message: Message):
             if not isinstance(is_subscribed, Exception) and not is_subscribed
         ]
         
-        # If user is subscribed to all channels, return early
+        # If user is subscribed to all channels, delete temp message and return
         if not non_subscribed:
+            await temp_msg.delete()
             return
         
         # Batch fetch chat data for non-subscribed channels
@@ -346,9 +350,12 @@ async def not_joined(client: Client, message: Message):
             reply_markup=InlineKeyboardMarkup(buttons),
         )
         
+        # Delete the temporary message after sending force sub message
+        await temp_msg.delete()
+        
     except Exception as e:
         print(f"Final Error in not_joined: {e}")
-        await message.reply(
+        await temp_msg.edit(
             f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Im_Sukuna02</i></b>\n"
             f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
         )
@@ -362,6 +369,9 @@ async def not_joined_simple(client: Client, message: Message):
     """Simpler version that handles database format issues"""
     user_id = message.from_user.id
     buttons = []
+    
+    # Send checking subscription message
+    temp_msg = await message.reply("<b><i>Checking Subscription...</i></b>")
     
     try:
         # Get all channels from database
@@ -421,8 +431,9 @@ async def not_joined_simple(client: Client, message: Message):
                 print(f"Error processing channel {item}: {e}")
                 continue
         
-        # If user is subscribed to all channels, return early
+        # If user is subscribed to all channels, delete temp message and return
         if not buttons:
+            await temp_msg.delete()
             return
         
         # Add retry button
@@ -453,9 +464,12 @@ async def not_joined_simple(client: Client, message: Message):
             reply_markup=InlineKeyboardMarkup(buttons),
         )
         
+        # Delete the temporary message after sending force sub message
+        await temp_msg.delete()
+        
     except Exception as e:
         print(f"Final Error in not_joined_simple: {e}")
-        await message.reply(
+        await temp_msg.edit(
             f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Im_Sukuna02</i></b>\n"
             f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
         )
