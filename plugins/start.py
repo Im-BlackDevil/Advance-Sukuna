@@ -215,30 +215,50 @@ chat_data_cache = {}
 
 async def not_joined(client: Client, message: Message):
     temp = await message.reply("<b><i>Checking Subscription...</i></b>")
-
-    user_id = message.from_user.id
-    buttons = []
-    count = 0
-
-    # Fetch the latest force sub picture from the database
-    force_pics = await db.get_force_pics()
-    if force_pics:
-        # Sort photos by key (which includes timestamp) to get the latest one
-        latest_photo_key = sorted(force_pics.keys(), reverse=True)[0]
-        force_pic = force_pics[latest_photo_key]['file_id']
-    else:
-        force_pic = FORCE_PIC  # Fallback to default if no photos in DB
-
+    
     try:
-        all_channels = await db.show_channels()  # Should return list of (chat_id, mode) tuples
-        for total, chat_id in enumerate(all_channels, start=1):
-            mode = await db.get_channel_mode(chat_id)  # fetch mode 
+        user_id = message.from_user.id
+        buttons = []
+        count = 0
+        
+        # Fetch the latest force sub picture from the database
+        try:
+            force_pics = await db.get_force_pics()
+            if force_pics and force_pics.keys():
+                # Sort photos by key (which includes timestamp) to get the latest one
+                latest_photo_key = sorted(force_pics.keys(), reverse=True)[0]
+                force_pic = force_pics[latest_photo_key]['file_id']
+            else:
+                force_pic = FORCE_PIC  # Fallback to default if no photos in DB
+                
+            await temp.edit("<b><i>Getting channels...</i></b>")
+        except Exception as e:
+            print(f"Error fetching force photos: {e}")
+            force_pic = FORCE_PIC  # Fallback to default
+            await temp.edit("<b><i>Using default force pic...</i></b>")
 
-            await message.reply_chat_action(ChatAction.TYPING)
+        # Get all channels
+        try:
+            all_channels = await db.show_channels()
+            if not all_channels:
+                await temp.edit("<b><i>No force subscription channels found.</i></b>")
+                return
+                
+            await temp.edit(f"<b><i>Checking {len(all_channels)} channels...</i></b>")
+        except Exception as e:
+            print(f"Error fetching channels: {e}")
+            await temp.edit(f"<b><i>Error fetching channels: {str(e)}</i></b>")
+            return
 
-            if not await is_sub(client, user_id, chat_id):
-                try:
-                    # Cache chat info
+        for chat_id in all_channels:
+            try:
+                # Get channel mode
+                mode = await db.get_channel_mode(chat_id)
+                
+                # Check if user is subscribed
+                is_subscribed = await is_sub(client, user_id, chat_id)
+                if not is_subscribed:
+                    # Try to get chat data from cache or fetch it
                     if chat_id in chat_data_cache:
                         data = chat_data_cache[chat_id]
                     else:
@@ -267,45 +287,52 @@ async def not_joined(client: Client, message: Message):
 
                     buttons.append([InlineKeyboardButton(text=name, url=link)])
                     count += 1
-                    await temp.edit(f"<b>{'! ' * count}</b>")
+                    await temp.edit(f"<b><i>Found {count} channel(s) to join</i></b>")
+            except Exception as e:
+                print(f"Error processing channel {chat_id}: {e}")
+                # Continue with other channels instead of stopping
 
-                except Exception as e:
-                    print(f"Error with chat {chat_id}: {e}")
-                    return await temp.edit(
-                        f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @rohit_1888</i></b>\n"
-                        f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
-                    )
+        # If no channels need to be joined
+        if count == 0:
+            await temp.delete()
+            return
 
-        # Retry Button
+        # Add retry button
         try:
-            buttons.append([
-                InlineKeyboardButton(
-                    text='♻️ Tʀʏ Aɢᴀɪɴ',
-                    url=f"https://t.me/{client.username}?start={message.command[1]}"
-                )
-            ])
-        except IndexError:
-            pass
+            if len(message.command) > 1:
+                buttons.append([
+                    InlineKeyboardButton(
+                        text='♻️ Tʀʏ Aɢᴀɪɴ',
+                        url=f"https://t.me/{client.username}?start={message.command[1]}"
+                    )
+                ])
+        except Exception as e:
+            print(f"Error adding retry button: {e}")
 
-        await message.reply_photo(
-            photo=force_pic,  # Use the dynamically fetched force_pic
-            caption=FORCE_MSG.format(
-                first=message.from_user.first_name,
-                last=message.from_user.last_name,
-                username=None if not message.from_user.username else '@' + message.from_user.username,
-                mention=message.from_user.mention,
-                id=message.from_user.id
-            ),
-            reply_markup=InlineKeyboardMarkup(buttons),
-        )
+        # Send final message with photo
+        try:
+            await temp.delete()
+            await message.reply_photo(
+                photo=force_pic,
+                caption=FORCE_MSG.format(
+                    first=message.from_user.first_name,
+                    last=message.from_user.last_name or "",
+                    username=None if not message.from_user.username else '@' + message.from_user.username,
+                    mention=message.from_user.mention,
+                    id=message.from_user.id
+                ),
+                reply_markup=InlineKeyboardMarkup(buttons),
+            )
+        except Exception as e:
+            print(f"Error sending final message: {e}")
+            await temp.edit(f"<b><i>Error sending final message: {str(e)}</i></b>")
 
-    except Exception as e:
-        print(f"Final Error: {e}")
+    except Exception as main_error:
+        print(f"Main function error: {main_error}")
         await temp.edit(
-            f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Real_Sukuna02</i></b>\n"
-            f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
+            f"<b><i>! Error in subscription checking. Contact developer @rohit_1888</i></b>\n"
+            f"<blockquote expandable><b>Reason:</b> {str(main_error)}</blockquote>"
         )
-
 
 #=====================================================================================##
 
