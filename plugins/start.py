@@ -91,124 +91,116 @@ async def start_command(client: Client, message: Message):
     if len(text) > 7:
         try:
             basic = text.split(" ", 1)[1]
-            print(f"Received payload: {basic}")  # Debug log
+            print(f"🔍 Received payload: {basic}")  # Debug log
             
             # Handle premium links (yu3elk prefix)
             if basic.startswith("yu3elk") and basic.endswith("7"):
                 base64_string = basic[6:-1]  # Remove yu3elk prefix and 7 suffix
-                print(f"Premium link detected, base64: {base64_string}")  # Debug log
+                print(f"✅ Premium link detected, base64: {base64_string}")  # Debug log
             else:
                 base64_string = basic
-                print(f"Regular link, base64: {base64_string}")  # Debug log
+                print(f"📝 Regular link, base64: {base64_string}")  # Debug log
 
             # For non-premium users, redirect to shortener
             if not is_premium and user_id != OWNER_ID and not basic.startswith("yu3elk"):
+                print(f"🔒 Non-premium user, redirecting to shortener")
                 await short_url(client, message, base64_string)
                 return
 
         except Exception as e:
-            print(f"Error processing start payload: {e}")
+            print(f"❌ Error processing start payload: {e}")
             await message.reply_text("❌ Invalid link format!")
             return
 
         # Decode the base64 string
         try:
-            # First decode the base64
             decoded_string = await decode(base64_string)
-            print(f"Decoded string: {decoded_string}")  # Debug log
-            
-            # Parse the decoded string to extract message IDs
-            ids = []
-            
-            # Try new format first (if extract_message_ids function exists)
-            try:
-                from helper_func import extract_message_ids
-                raw_ids = extract_message_ids(decoded_string)
-                
-                if raw_ids:
-                    if len(raw_ids) == 1:
-                        # Single message
-                        ids = [int(raw_ids[0] / abs(client.db_channel.id))]
-                    elif len(raw_ids) == 2:
-                        # Batch of messages
-                        start = int(raw_ids[0] / abs(client.db_channel.id))
-                        end = int(raw_ids[1] / abs(client.db_channel.id))
-                        ids = list(range(start, end + 1)) if start <= end else list(range(start, end - 1, -1))
-                    print(f"New format IDs: {ids}")  # Debug log
-                    
-            except (ImportError, Exception) as e:
-                print(f"New format failed: {e}")
-                
-            # If new format failed, try old format
-            if not ids:
-                # Old format: "something-msgid" or "something-start-end"
-                parts = decoded_string.split("-")
-                print(f"Old format parts: {parts}")  # Debug log
-                
-                if len(parts) == 2:
-                    # Single message: "something-msgid"
-                    try:
-                        msg_id = int(parts[1])
-                        actual_id = int(msg_id / abs(client.db_channel.id))
-                        ids = [actual_id]
-                        print(f"Single message ID: {actual_id}")  # Debug log
-                    except Exception as e:
-                        print(f"Error parsing single ID: {e}")
-                        
-                elif len(parts) == 3:
-                    # Batch: "something-start-end"
-                    try:
-                        start_id = int(parts[1])
-                        end_id = int(parts[2])
-                        start = int(start_id / abs(client.db_channel.id))
-                        end = int(end_id / abs(client.db_channel.id))
-                        ids = list(range(start, end + 1)) if start <= end else list(range(start, end - 1, -1))
-                        print(f"Batch IDs range: {start} to {end}")  # Debug log
-                    except Exception as e:
-                        print(f"Error parsing batch IDs: {e}")
-                        
-            # If still no IDs found, try direct parsing
-            if not ids:
-                # Maybe the decoded string is just the message ID(s)
-                try:
-                    if decoded_string.isdigit():
-                        # Single number
-                        msg_id = int(decoded_string)
-                        actual_id = int(msg_id / abs(client.db_channel.id))
-                        ids = [actual_id]
-                        print(f"Direct single ID: {actual_id}")  # Debug log
-                    else:
-                        # Try comma-separated or space-separated
-                        for separator in [',', ' ', '-']:
-                            if separator in decoded_string:
-                                parts = [p.strip() for p in decoded_string.split(separator) if p.strip().isdigit()]
-                                if len(parts) >= 1:
-                                    ids = [int(int(p) / abs(client.db_channel.id)) for p in parts]
-                                    print(f"Parsed IDs with separator '{separator}': {ids}")  # Debug log
-                                    break
-                except Exception as e:
-                    print(f"Error in direct parsing: {e}")
-                    
-            if not ids:
-                print(f"Could not parse any IDs from: {decoded_string}")
-                await message.reply_text("❌ Invalid link format! Could not extract message IDs.")
-                return
-                
+            print(f"🔓 Decoded string: {decoded_string}")  # Debug log
         except Exception as e:
-            print(f"Error decoding base64: {e}")
+            print(f"❌ Base64 decode error: {e}")
             await message.reply_text("❌ Invalid link! Could not decode.")
             return
 
-        # Get messages and send them
-        temp_msg = await message.reply("<b>Please wait...</b>")
+        # Extract message IDs using your existing function
         try:
-            print(f"Fetching messages with IDs: {ids}")  # Debug log
-            messages = await get_messages(client, ids)
-            print(f"Retrieved {len(messages)} messages")  # Debug log
+            raw_ids = extract_message_ids(decoded_string)
+            print(f"📋 Extracted raw IDs: {raw_ids}")  # Debug log
+            
+            if not raw_ids:
+                print(f"❌ No IDs extracted from: {decoded_string}")
+                await message.reply_text("❌ Invalid link format! Could not extract message IDs.")
+                return
+            
+            # Convert raw IDs to actual message IDs
+            ids = []
+            if len(raw_ids) == 1:
+                # Single message
+                actual_id = int(raw_ids[0] / abs(client.db_channel.id))
+                ids = [actual_id]
+                print(f"📄 Single message ID: {actual_id}")
+            elif len(raw_ids) == 2:
+                # Batch of messages
+                start_raw = raw_ids[0]
+                end_raw = raw_ids[1]
+                start = int(start_raw / abs(client.db_channel.id))
+                end = int(end_raw / abs(client.db_channel.id))
+                ids = list(range(start, end + 1)) if start <= end else list(range(start, end - 1, -1))
+                print(f"📚 Batch IDs: {start} to {end} (total: {len(ids)})")
+            else:
+                print(f"⚠️ Unexpected number of raw IDs: {len(raw_ids)}")
+                await message.reply_text("❌ Invalid link format!")
+                return
+                
         except Exception as e:
-            await temp_msg.delete()
-            await message.reply_text(f"❌ Error retrieving messages: {str(e)}")
-            print(f"Error getting messages: {e}")
+            print(f"❌ Error extracting message IDs: {e}")
+            
+            # Fallback to old decoding method
+            try:
+                print(f"🔄 Trying fallback method...")
+                parts = decoded_string.split("-")
+                print(f"🔧 Split parts: {parts}")
+                
+                if len(parts) == 2 and parts[0] == "get":
+                    # Single message: get-msgid
+                    msg_id = int(parts[1])
+                    actual_id = int(msg_id / abs(client.db_channel.id))
+                    ids = [actual_id]
+                    print(f"📄 Fallback single ID: {actual_id}")
+                elif len(parts) == 3 and parts[0] == "get":
+                    # Batch: get-start-end
+                    start_id = int(parts[1])
+                    end_id = int(parts[2])
+                    start = int(start_id / abs(client.db_channel.id))
+                    end = int(end_id / abs(client.db_channel.id))
+                    ids = list(range(start, end + 1)) if start <= end else list(range(start, end - 1, -1))
+                    print(f"📚 Fallback batch: {start} to {end}")
+                else:
+                    print(f"❌ Unrecognized format in fallback: {parts}")
+                    await message.reply_text("❌ Invalid link format!")
+                    return
+                    
+            except Exception as fallback_error:
+                print(f"❌ Fallback also failed: {fallback_error}")
+                await message.reply_text("❌ Failed to process the link!")
+                return
+
+        # Show loading message
+        temp_msg = await message.reply("<b>📥 Fetching your files...</b>")
+        
+        try:
+            print(f"📡 Getting messages with IDs: {ids[:5]}{'...' if len(ids) > 5 else ''}")
+            messages = await get_messages(client, ids)
+            
+            if not messages:
+                await temp_msg.edit("<b>❌ No messages found!</b>")
+                print(f"❌ No messages retrieved for IDs: {ids}")
+                return
+                
+            print(f"✅ Retrieved {len(messages)} messages")
+            
+        except Exception as e:
+            await temp_msg.edit(f"<b>❌ Error retrieving messages: {str(e)}</b>")
+            print(f"❌ Error getting messages: {e}")
             return
         finally:
             try:
@@ -218,8 +210,11 @@ async def start_command(client: Client, message: Message):
 
         # Send messages to user
         codeflix_msgs = []
-        for msg in messages:
+        successful_sends = 0
+        
+        for i, msg in enumerate(messages):
             if not msg:
+                print(f"⚠️ Message {i} is None, skipping")
                 continue
                 
             try:
@@ -228,7 +223,7 @@ async def start_command(client: Client, message: Message):
                 if CUSTOM_CAPTION and msg.document:
                     caption = CUSTOM_CAPTION.format(
                         previouscaption="" if not msg.caption else msg.caption.html,
-                        filename=msg.document.file_name
+                        filename=msg.document.file_name if msg.document.file_name else "Unknown File"
                     )
                 elif msg.caption:
                     caption = msg.caption.html
@@ -236,7 +231,7 @@ async def start_command(client: Client, message: Message):
                 # Prepare reply markup
                 reply_markup = msg.reply_markup if not DISABLE_CHANNEL_BUTTON else None
 
-                # Copy message
+                # Copy message to user
                 copied_msg = await msg.copy(
                     chat_id=message.from_user.id,
                     caption=caption,
@@ -245,9 +240,11 @@ async def start_command(client: Client, message: Message):
                     protect_content=PROTECT_CONTENT
                 )
                 codeflix_msgs.append(copied_msg)
+                successful_sends += 1
+                print(f"✅ Sent message {i+1}/{len(messages)}")
                 
             except FloodWait as e:
-                print(f"FloodWait: {e.x} seconds")
+                print(f"⏳ FloodWait: {e.x} seconds for message {i}")
                 await asyncio.sleep(e.x)
                 try:
                     copied_msg = await msg.copy(
@@ -258,41 +255,56 @@ async def start_command(client: Client, message: Message):
                         protect_content=PROTECT_CONTENT
                     )
                     codeflix_msgs.append(copied_msg)
+                    successful_sends += 1
+                    print(f"✅ Sent message {i+1}/{len(messages)} after FloodWait")
                 except Exception as retry_e:
-                    print(f"Retry failed: {retry_e}")
+                    print(f"❌ Retry failed for message {i}: {retry_e}")
                     
             except Exception as e:
-                print(f"Failed to send message: {e}")
+                print(f"❌ Failed to send message {i}: {e}")
 
-        # Handle auto-delete
+        print(f"📊 Successfully sent {successful_sends}/{len(messages)} messages")
+
+        # Handle auto-delete if enabled and files were sent
         if FILE_AUTO_DELETE > 0 and codeflix_msgs:
-            notification_msg = await message.reply(
-                f"<b>Tʜɪs Fɪʟᴇ ᴡɪʟʟ ʙᴇ Dᴇʟᴇᴛᴇᴅ ɪɴ  {get_exp_time(FILE_AUTO_DELETE)}. Pʟᴇᴀsᴇ sᴀᴠᴇ ᴏʀ ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ ʏᴏᴜʀ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs ʙᴇғᴏʀᴇ ɪᴛ ɢᴇᴛs Dᴇʟᴇᴛᴇᴅ.</b>"
-            )
-
-            # Wait and delete files
-            await asyncio.sleep(FILE_AUTO_DELETE)
-
-            for snt_msg in codeflix_msgs:    
-                if snt_msg:
-                    try:    
-                        await snt_msg.delete()  
-                    except Exception as e:
-                        print(f"Error deleting message {snt_msg.id}: {e}")
-
-            # Update notification with "Get File Again" button
             try:
-                reload_url = f"https://t.me/{client.username}?start={message.command[1]}"
-                keyboard = InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("ɢᴇᴛ ғɪʟᴇ ᴀɢᴀɪɴ!", url=reload_url)]]
+                notification_msg = await message.reply(
+                    f"<b>⏰ This file will be deleted in {get_exp_time(FILE_AUTO_DELETE)}. "
+                    f"Please save or forward it to your saved messages before it gets deleted.</b>"
                 )
 
-                await notification_msg.edit(
-                    "<b>ʏᴏᴜʀ ᴠɪᴅᴇᴏ / ꜰɪʟᴇ ɪꜱ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ !!\n\nᴄʟɪᴄᴋ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ᴅᴇʟᴇᴛᴇᴅ ᴠɪᴅᴇᴏ / ꜰɪʟᴇ 👇</b>",
-                    reply_markup=keyboard
-                )
+                print(f"⏰ Auto-delete timer set for {FILE_AUTO_DELETE} seconds")
+                await asyncio.sleep(FILE_AUTO_DELETE)
+
+                # Delete all sent files
+                deleted_count = 0
+                for snt_msg in codeflix_msgs:    
+                    if snt_msg:
+                        try:    
+                            await snt_msg.delete()
+                            deleted_count += 1
+                        except Exception as e:
+                            print(f"❌ Error deleting message {snt_msg.id}: {e}")
+
+                print(f"🗑️ Deleted {deleted_count}/{len(codeflix_msgs)} messages")
+
+                # Update notification with "Get File Again" button
+                try:
+                    reload_url = f"https://t.me/{client.username}?start={message.command[1]}"
+                    keyboard = InlineKeyboardMarkup(
+                        [[InlineKeyboardButton("🔄 Get File Again!", url=reload_url)]]
+                    )
+
+                    await notification_msg.edit(
+                        "<b>🗑️ Your files have been successfully deleted!\n\n"
+                        "Click the button below to get your files again 👇</b>",
+                        reply_markup=keyboard
+                    )
+                except Exception as e:
+                    print(f"❌ Error updating notification: {e}")
+                    
             except Exception as e:
-                print(f"Error updating notification: {e}")
+                print(f"❌ Error in auto-delete process: {e}")
                 
     else:
         # No payload - show start message
@@ -317,6 +329,8 @@ async def start_command(client: Client, message: Message):
             reply_markup=reply_markup,
             message_effect_id=5104841245755180586  # 🔥
         )
+        print(f"👋 Sent start message to user {user_id}")
+        return
 #=====================================================================================##
 
 @Bot.on_message(filters.command('myplan') & filters.private)
