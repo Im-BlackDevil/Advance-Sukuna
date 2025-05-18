@@ -1,9 +1,8 @@
+
 import base64
 import re
 import asyncio
 import time
-import random
-import string
 from pyrogram import filters
 from pyrogram.enums import ChatMemberStatus
 from config import *
@@ -71,16 +70,6 @@ async def is_sub(client, user_id, channel_id):
         return False
 
 
-# Function to generate a random padding string
-def generate_padding(length=50):
-    """Generate random padding to make the encoded string longer"""
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
-
-# Function to add timestamp for uniqueness
-def get_timestamp():
-    """Get current timestamp in milliseconds"""
-    return str(int(time.time() * 1000))
-
 
 async def encode(string):
     string_bytes = string.encode("ascii")
@@ -94,49 +83,6 @@ async def decode(base64_string):
     string_bytes = base64.urlsafe_b64decode(base64_bytes) 
     string = string_bytes.decode("utf-8")
     return string
-
-# New function to extract message IDs from the longer encoded strings
-def extract_message_ids(decoded_string):
-    """
-    Extract message IDs from decoded string that may contain timestamps and padding.
-    Handles both old format (get-id) and new format (get-id-timestamp-padding)
-    """
-    try:
-        parts = decoded_string.split('-')
-        
-        if len(parts) >= 2 and parts[0] == "get":
-            # Handle single message: get-{msg_id}-{timestamp}-{padding}
-            if len(parts) == 2:
-                # Old format: get-{msg_id}
-                return [int(parts[1])]
-            elif len(parts) >= 4:
-                # New format with timestamp and padding
-                # For single message: parts[1] is the message ID
-                # For batch: parts[1] and parts[2] are start and end IDs
-                
-                # Check if it's a batch (has two numeric values after 'get')
-                try:
-                    first_id = int(parts[1])
-                    second_id = int(parts[2])
-                    # If both are valid numbers, it's likely a batch
-                    return [first_id, second_id]
-                except (ValueError, IndexError):
-                    # If second part is not a number, it's a single message with timestamp
-                    return [int(parts[1])]
-            else:
-                # New format but only 3 parts - likely single message
-                return [int(parts[1])]
-        
-        # Fallback: try to extract all numbers from the string
-        numbers = [int(part) for part in parts if part.isdigit()]
-        if numbers:
-            return numbers[:2] if len(numbers) >= 2 else [numbers[0]]
-            
-    except (ValueError, IndexError) as e:
-        print(f"Error extracting message IDs: {e}")
-        return []
-    
-    return []
 
 async def get_messages(client, message_ids):
     messages = []
