@@ -212,9 +212,10 @@ async def start_command(client: Client, message: Message):
 
 # Create a global dictionary to store chat data
 chat_data_cache = {}
+invite_link_cache = {}  # Cache for storing persistent invite links
 
 async def not_joined(client: Client, message: Message):
-    """Ultra-optimized version with batch processing - Fixed version"""
+    """Ultra-optimized version with batch processing and persistent invite links"""
     user_id = message.from_user.id
     
     # Send checking subscription message
@@ -297,27 +298,10 @@ async def not_joined(client: Client, message: Message):
             # Update cache
             chat_data_cache[chat_id] = chat_data
             
-            # Generate button
+            # Generate button with persistent invite link
             try:
                 name = chat_data.title
-                
-                if mode == "on" and not chat_data.username:
-                    invite = await client.create_chat_invite_link(
-                        chat_id=chat_id,
-                        creates_join_request=True,
-                        expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
-                    )
-                    link = invite.invite_link
-                else:
-                    if chat_data.username:
-                        link = f"https://t.me/{chat_data.username}"
-                    else:
-                        invite = await client.create_chat_invite_link(
-                            chat_id=chat_id,
-                            expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
-                        )
-                        link = invite.invite_link
-                
+                link = await get_or_create_invite_link(client, chat_id, mode, chat_data)
                 buttons.append([InlineKeyboardButton(text=name, url=link)])
             except Exception as e:
                 print(f"Error creating button for chat {chat_id}: {e}")
@@ -359,6 +343,122 @@ async def not_joined(client: Client, message: Message):
             f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Im_Sukuna02</i></b>\n"
             f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
         )
+
+async def get_or_create_invite_link(client: Client, chat_id: int, mode: str, chat_data):
+    """
+    Get existing invite link from cache or create a new persistent one
+    """
+    cache_key = f"{chat_id}_{mode}"
+    
+    # Check if we already have a cached invite link
+    if cache_key in invite_link_cache:
+        cached_link = invite_link_cache[cache_key]
+        
+        # Verify if the cached link is still valid
+        if await is_invite_link_valid(client, chat_id, cached_link):
+            return cached_link
+        else:
+            # Remove invalid link from cache
+            del invite_link_cache[cache_key]
+    
+    # Create new invite link
+    try:
+        if chat_data.username:
+            # For public channels, use the username link
+            link = f"https://t.me/{chat_data.username}"
+        else:
+            # For private channels, create invite link
+            if mode == "on":
+                # Create join request link for "on" mode
+                invite = await client.create_chat_invite_link(
+                    chat_id=chat_id,
+                    creates_join_request=True,
+                    name=f"FSub_JoinRequest_{chat_id}",  # Named invite for easier management
+                    # Remove expiry for persistent links
+                )
+            else:
+                # Create regular invite link for other modes
+                invite = await client.create_chat_invite_link(
+                    chat_id=chat_id,
+                    name=f"FSub_Regular_{chat_id}",  # Named invite for easier management
+                    # Remove expiry for persistent links
+                )
+            
+            link = invite.invite_link
+        
+        # Cache the new invite link
+        invite_link_cache[cache_key] = link
+        
+        # Optional: Save to database for persistence across bot restarts
+        await db.save_invite_link(chat_id, mode, link)
+        
+        return link
+        
+    except Exception as e:
+        print(f"Error creating invite link for chat {chat_id}: {e}")
+        # Fallback: return a basic invite if possible
+        if chat_data.username:
+            return f"https://t.me/{chat_data.username}"
+        raise e
+
+async def is_invite_link_valid(client: Client, chat_id: int, invite_link: str) -> bool:
+    """
+    Check if an invite link is still valid
+    """
+    try:
+        # Extract invite hash from the link
+        if "t.me/" in invite_link:
+            if "+/" in invite_link or "joinchat/" in invite_link:
+                # For invite links, try to get invite info
+                invite_hash = invite_link.split("/")[-1]
+                await client.get_chat_invite_link_info(invite_hash)
+                return True
+            else:
+                # For username links, they don't expire
+                return True
+        return False
+    except Exception:
+        # If we can't verify or get an error, consider it invalid
+        return False
+
+async def load_cached_invite_links():
+    """
+    Load cached invite links from database on bot startup
+    """
+    try:
+        cached_links = await db.get_all_invite_links()
+        for link_data in cached_links:
+            chat_id = link_data['chat_id']
+            mode = link_data['mode']
+            link = link_data['invite_link']
+            cache_key = f"{chat_id}_{mode}"
+            invite_link_cache[cache_key] = link
+        print(f"Loaded {len(cached_links)} cached invite links")
+    except Exception as e:
+        print(f"Error loading cached invite links: {e}")
+
+async def clear_invalid_invite_links():
+    """
+    Periodic cleanup function to remove invalid cached links
+    Call this function periodically (e.g., every 24 hours)
+    """
+    invalid_keys = []
+    
+    for cache_key, invite_link in invite_link_cache.items():
+        chat_id = int(cache_key.split("_")[0])
+        try:
+            if not await is_invite_link_valid(None, chat_id, invite_link):
+                invalid_keys.append(cache_key)
+        except Exception:
+            invalid_keys.append(cache_key)
+    
+    # Remove invalid links
+    for key in invalid_keys:
+        del invite_link_cache[key]
+        chat_id, mode = key.split("_", 1)
+        await db.delete_invite_link(int(chat_id), mode)
+    
+    print(f"Cleaned up {len(invalid_keys)} invalid invite links")
 
 async def async_return(value):
     """Helper function to return cached values as async tasks"""
