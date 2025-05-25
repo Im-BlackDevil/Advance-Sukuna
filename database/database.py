@@ -44,6 +44,9 @@ class rohit:
         self.rqst_fsub_Channel_data = self.database['request_forcesub_channel']
         self.start_pics = self.database['start_pics']  
         self.force_pics = self.database['force_pics']
+        self.invite_links = self.database['invite_links']  # New collection for invite links
+        self.shortlink_config = self.database['shortlink_config']  # Added missing shortlink_config
+        self.tutorial_config = self.database['tutorial_config']    # Added missing tutorial_config
 
     async def initialize_shortlink_config(self):
         """Initialize shortlink_config with default values if not set."""
@@ -151,6 +154,8 @@ class rohit:
     async def rem_channel(self, channel_id: int):
         if await self.channel_exist(channel_id):
             await self.fsub_data.delete_one({'_id': channel_id})
+            # Also remove associated invite links when channel is removed
+            await self.delete_all_invite_links_for_channel(channel_id)
             return
 
     async def show_channels(self):
@@ -168,6 +173,69 @@ class rohit:
             {'$set': {'mode': mode}},
             upsert=True
         )
+
+    # INVITE LINK MANAGEMENT - NEW FUNCTIONS
+    async def save_invite_link(self, chat_id: int, mode: str, invite_link: str):
+        """Save or update invite link for a channel with specific mode"""
+        await self.invite_links.update_one(
+            {'chat_id': chat_id, 'mode': mode},
+            {
+                '$set': {
+                    'invite_link': invite_link,
+                    'created_at': datetime.utcnow(),
+                    'updated_at': datetime.utcnow()
+                }
+            },
+            upsert=True
+        )
+
+    async def get_invite_link(self, chat_id: int, mode: str):
+        """Get invite link for specific channel and mode"""
+        result = await self.invite_links.find_one({'chat_id': chat_id, 'mode': mode})
+        return result['invite_link'] if result else None
+
+    async def get_all_invite_links(self):
+        """Get all cached invite links"""
+        links = await self.invite_links.find().to_list(length=None)
+        return [
+            {
+                'chat_id': link['chat_id'],
+                'mode': link['mode'],
+                'invite_link': link['invite_link']
+            }
+            for link in links
+        ]
+
+    async def delete_invite_link(self, chat_id: int, mode: str):
+        """Delete specific invite link"""
+        await self.invite_links.delete_one({'chat_id': chat_id, 'mode': mode})
+
+    async def delete_all_invite_links_for_channel(self, chat_id: int):
+        """Delete all invite links for a specific channel"""
+        await self.invite_links.delete_many({'chat_id': chat_id})
+
+    async def update_invite_link_timestamp(self, chat_id: int, mode: str):
+        """Update the last used timestamp for an invite link"""
+        await self.invite_links.update_one(
+            {'chat_id': chat_id, 'mode': mode},
+            {'$set': {'last_used': datetime.utcnow()}}
+        )
+
+    async def get_old_invite_links(self, days: int = 30):
+        """Get invite links older than specified days for cleanup"""
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        old_links = await self.invite_links.find({
+            'created_at': {'$lt': cutoff_date}
+        }).to_list(length=None)
+        return old_links
+
+    async def cleanup_old_invite_links(self, days: int = 30):
+        """Remove invite links older than specified days"""
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        result = await self.invite_links.delete_many({
+            'created_at': {'$lt': cutoff_date}
+        })
+        return result.deleted_count
 
     # REQUEST FORCE-SUB MANAGEMENT
     async def req_user(self, channel_id: int, user_id: int):
@@ -263,7 +331,7 @@ class rohit:
         config = await self.tutorial_config.find_one({'_id': 'config'})
         return config.get('tut_vid', TUT_VID) if config else TUT_VID
 
-# START PHOTOS MANAGEMENT
+    # START PHOTOS MANAGEMENT
     async def add_start_pics(self, url: str):
         photo_data = {
             "url": url
@@ -290,7 +358,6 @@ class rohit:
 
     async def delete_force_pics(self, photo_id: str):
         await self.force_pics.delete_one({"_id": ObjectId(photo_id)})
-    
 
 
 db = rohit(DB_URI, DB_NAME)
