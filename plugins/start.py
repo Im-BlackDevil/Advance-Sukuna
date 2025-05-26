@@ -692,13 +692,6 @@ async def cleanup_invalid_links_simple():
     if invalid_keys:
         print(f"🧹 Cleaned up {len(invalid_keys)} invalid invite links")
 
-# Call this when your bot starts
-async def initialize_invite_system():
-    """
-    Initialize the invite link system on bot startup
-    """
-    await load_cached_invite_links_simple()
-    print("🚀 Invite link system initialized")  l
 #=====================================================================================##
 
 @Bot.on_message(filters.command('myplan') & filters.private)
