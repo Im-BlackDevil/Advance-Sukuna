@@ -13,7 +13,8 @@ from pyrogram.enums import ParseMode, ChatAction
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatInviteLink, ChatPrivileges
 from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
 from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated, UserNotParticipant
-from bot import Bot
+# Remove the circular import - we'll get Bot instance from filters
+# from bot import Bot
 from config import *
 from helper_func import *
 from database.database import *
@@ -46,7 +47,8 @@ async def short_url(client: Client, message: Message, base64_string):
     except IndexError:
         pass
 
-@Bot.on_message(filters.command('start') & filters.private)
+# Use filters.create to get the Bot instance instead of importing it
+@Client.on_message(filters.command('start') & filters.private)
 async def start_command(client: Client, message: Message):
     user_id = message.from_user.id
     id = message.from_user.id
@@ -241,7 +243,6 @@ async def start_command(client: Client, message: Message):
 
 #=====================================================================================#
 
-# Create a global dictionary to store chat data
 # Create a global dictionary to store chat data
 chat_data_cache = {}
 invite_link_cache = {}  # Cache for storing persistent invite links
@@ -453,257 +454,40 @@ async def is_invite_link_valid(client: Client, chat_id: int, invite_link: str) -
         # If we can't verify or get an error, consider it invalid
         return False
 
-async def load_cached_invite_links():
-    """
-    Load cached invite links from database on bot startup
-    """
-    try:
-        cached_links = await db.get_all_invite_links()
-        for link_data in cached_links:
-            chat_id = link_data['chat_id']
-            mode = link_data['mode']
-            link = link_data['invite_link']
-            cache_key = f"{chat_id}_{mode}"
-            invite_link_cache[cache_key] = link
-        print(f"Loaded {len(cached_links)} cached invite links")
-    except Exception as e:
-        print(f"Error loading cached invite links: {e}")
-
-async def clear_invalid_invite_links():
-    """
-    Periodic cleanup function to remove invalid cached links
-    Call this function periodically (e.g., every 24 hours)
-    """
-    invalid_keys = []
-    
-    for cache_key, invite_link in invite_link_cache.items():
-        chat_id = int(cache_key.split("_")[0])
-        try:
-            if not await is_invite_link_valid(None, chat_id, invite_link):
-                invalid_keys.append(cache_key)
-        except Exception:
-            invalid_keys.append(cache_key)
-    
-    # Remove invalid links
-    for key in invalid_keys:
-        del invite_link_cache[key]
-        chat_id, mode = key.split("_", 1)
-        await db.delete_invite_link(int(chat_id), mode)
-    
-    print(f"Cleaned up {len(invalid_keys)} invalid invite links")
-
 async def async_return(value):
     """Helper function to return cached values as async tasks"""
     return value
 
-# Alternative simpler version if the above still has issues
-# Global cache for invite links
-invite_link_cache = {}
-
-async def not_joined_simple(client: Client, message: Message):
-    """Simpler version with persistent invite links"""
-    user_id = message.from_user.id
-    buttons = []
-    
-    # Send checking subscription message
-    temp_msg = await message.reply("<b><i>Checking Subscription...</i></b>")
-    
-    try:
-        # Get all channels from database
-        all_channels_data = await db.show_channels()
-        
-        if not all_channels_data:
-            return
-        
-        # Process each channel individually to avoid unpacking errors
-        for item in all_channels_data:
-            try:
-                # Handle different possible formats
-                if isinstance(item, tuple):
-                    chat_id = item[0]
-                    mode = item[1] if len(item) > 1 else await db.get_channel_mode(chat_id)
-                elif isinstance(item, (int, str)):
-                    chat_id = int(item)
-                    mode = await db.get_channel_mode(chat_id)
-                else:
-                    print(f"Unexpected item format: {item}")
-                    continue
-                
-                # Check subscription
-                if await is_sub(client, user_id, chat_id):
-                    continue
-                
-                # Get chat data from cache or fetch it
-                if chat_id in chat_data_cache:
-                    data = chat_data_cache[chat_id]
-                else:
-                    data = await client.get_chat(chat_id)
-                    chat_data_cache[chat_id] = data
-                
-                name = data.title
-                
-                # Get persistent invite link
-                link = await get_or_create_invite_link_simple(client, chat_id, mode, data)
-                buttons.append([InlineKeyboardButton(text=name, url=link)])
-                
-            except Exception as e:
-                print(f"Error processing channel {item}: {e}")
-                continue
-        
-        # If user is subscribed to all channels, delete temp message and return
-        if not buttons:
-            await temp_msg.delete()
-            return
-        
-        # Add retry button
-        try:
-            buttons.append([
-                InlineKeyboardButton(
-                    text='♻️ Tʀʏ Aɢᴀɪɴ',
-                    url=f"https://t.me/{client.username}?start={message.command[1]}"
-                )
-            ])
-        except (IndexError, AttributeError):
-            pass
-
-        # Get force pic
-        force_pics = await db.get_force_pics()
-        force_pic_url = random.choice(force_pics)["url"] if force_pics else FORCE_PIC
-
-        # Send final message
-        await message.reply_photo(
-            photo=force_pic_url,
-            caption=FORCE_MSG.format(
-                first=message.from_user.first_name,
-                last=message.from_user.last_name,
-                username=None if not message.from_user.username else '@' + message.from_user.username,
-                mention=message.from_user.mention,
-                id=message.from_user.id
-            ),
-            reply_markup=InlineKeyboardMarkup(buttons),
-        )
-        
-        # Delete the temporary message after sending force sub message
-        await temp_msg.delete()
-        
-    except Exception as e:
-        print(f"Final Error in not_joined_simple: {e}")
-        await temp_msg.edit(
-            f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Im_Sukuna02</i></b>\n"
-            f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
-        )
-
-async def get_or_create_invite_link_simple(client: Client, chat_id: int, mode: str, chat_data):
+# Initialize function that will be called from bot.py
+async def initialize_invite_system():
     """
-    Simplified version of persistent invite link creation
+    Initialize the invite link system - load cached links from database
     """
-    cache_key = f"{chat_id}_{mode}"
-    
-    # Check if we already have a cached invite link
-    if cache_key in invite_link_cache:
-        cached_link = invite_link_cache[cache_key]
-        
-        # For username channels, the link never expires
-        if chat_data.username:
-            return cached_link
-        
-        # For invite links, check if it's still valid
-        if await is_invite_link_valid_simple(client, cached_link):
-            return cached_link
-        else:
-            # Remove invalid link from cache
-            del invite_link_cache[cache_key]
-            await db.delete_invite_link(chat_id, mode)
-    
-    # Check database for existing link
-    db_link = await db.get_invite_link(chat_id, mode)
-    if db_link:
-        # Verify if database link is still valid
-        if chat_data.username or await is_invite_link_valid_simple(client, db_link):
-            invite_link_cache[cache_key] = db_link
-            return db_link
-        else:
-            # Remove invalid link from database
-            await db.delete_invite_link(chat_id, mode)
-    
-    # Create new invite link
     try:
-        if chat_data.username:
-            # For public channels, use the username link
-            link = f"https://t.me/{chat_data.username}"
-        else:
-            # For private channels, create invite link
-            if mode == "on":
-                # Create join request link for "on" mode
-                invite = await client.create_chat_invite_link(
-                    chat_id=chat_id,
-                    creates_join_request=True,
-                    name=f"FSub_JoinRequest_{chat_id}",  # Named invite for easier management
-                )
-            else:
-                # Create regular invite link for other modes
-                invite = await client.create_chat_invite_link(
-                    chat_id=chat_id,
-                    name=f"FSub_Regular_{chat_id}",  # Named invite for easier management
-                )
+        # Check if database has the required methods
+        if hasattr(db, 'get_all_invite_links'):
+            cached_links = await db.get_all_invite_links()
+            for link_data in cached_links:
+                try:
+                    chat_id = link_data['chat_id']
+                    mode = link_data['mode']
+                    link = link_data['invite_link']
+                    cache_key = f"{chat_id}_{mode}"
+                    invite_link_cache[cache_key] = link
+                except Exception as e:
+                    print(f"Error loading cached link: {e}")
+                    continue
             
-            link = invite.invite_link
-        
-        # Cache the new invite link
-        invite_link_cache[cache_key] = link
-        
-        # Save to database for persistence across bot restarts
-        await db.save_invite_link(chat_id, mode, link)
-        
-        return link
-        
+            print(f"✅ Loaded {len(cached_links)} cached invite links")
+        else:
+            print("⚠️ Database doesn't support invite link caching - running without cache")
+            
     except Exception as e:
-        print(f"Error creating invite link for chat {chat_id}: {e}")
-        # Fallback: return a basic invite if possible
-        if chat_data.username:
-            return f"https://t.me/{chat_data.username}"
-        raise e
+        print(f"❌ Error initializing invite system: {e}")
 
-async def is_invite_link_valid_simple(client: Client, invite_link: str) -> bool:
+async def cleanup_invalid_links():
     """
-    Simplified version to check if an invite link is still valid
-    """
-    try:
-        # For username links, they don't expire
-        if "t.me/" in invite_link and not ("+" in invite_link or "joinchat" in invite_link):
-            return True
-        
-        # For invite links, try to get info (basic validation)
-        if "t.me/+" in invite_link:
-            invite_hash = invite_link.split("/+")[-1]
-            # Simple check - if we can extract hash, assume it's valid
-            # You can add more sophisticated validation here if needed
-            return len(invite_hash) > 10
-        
-        return False
-    except Exception:
-        return False
-
-async def load_cached_invite_links_simple():
-    """
-    Load cached invite links from database on bot startup - simplified version
-    """
-    try:
-        cached_links = await db.get_all_invite_links()
-        for link_data in cached_links:
-            chat_id = link_data['chat_id']
-            mode = link_data['mode']
-            link = link_data['invite_link']
-            cache_key = f"{chat_id}_{mode}"
-            invite_link_cache[cache_key] = link
-        
-        print(f"✅ Loaded {len(cached_links)} cached invite links")
-    except Exception as e:
-        print(f"❌ Error loading cached invite links: {e}")
-
-async def cleanup_invalid_links_simple():
-    """
-    Simple cleanup function to remove obviously invalid cached links
+    Periodic cleanup function to remove invalid cached links
     """
     invalid_keys = []
     
@@ -718,15 +502,19 @@ async def cleanup_invalid_links_simple():
     # Remove invalid links
     for key in invalid_keys:
         del invite_link_cache[key]
-        chat_id, mode = key.split("_", 1)
-        await db.delete_invite_link(int(chat_id), mode)
+        try:
+            chat_id, mode = key.split("_", 1)
+            if hasattr(db, 'delete_invite_link'):
+                await db.delete_invite_link(int(chat_id), mode)
+        except Exception as e:
+            print(f"Error cleaning up invalid link {key}: {e}")
     
     if invalid_keys:
         print(f"🧹 Cleaned up {len(invalid_keys)} invalid invite links")
-        
+                
 #=====================================================================================##
 
-@Bot.on_message(filters.command('myplan') & filters.private)
+@Client.on_message(filters.command('myplan') & filters.private)
 async def check_plan(client: Client, message: Message):
     user_id = message.from_user.id  # Get user ID from the message
 
@@ -738,7 +526,7 @@ async def check_plan(client: Client, message: Message):
 
 #=====================================================================================##
 # Command to add premium user
-@Bot.on_message(filters.command('addpremium') & filters.private & admin)
+@Client.on_message(filters.command('addpremium') & filters.private & admin)
 async def add_premium_user_command(client, msg):
     if len(msg.command) != 4:
         await msg.reply_text(
@@ -788,7 +576,7 @@ async def add_premium_user_command(client, msg):
 
 
 # Command to remove premium user
-@Bot.on_message(filters.command('remove_premium') & filters.private & admin)
+@Client.on_message(filters.command('remove_premium') & filters.private & admin)
 async def pre_remove_user(client: Client, msg: Message):
     if len(msg.command) != 2:
         await msg.reply_text("useage: /remove_premium user_id ")
@@ -802,7 +590,7 @@ async def pre_remove_user(client: Client, msg: Message):
 
 
 # Command to list active premium users
-@Bot.on_message(filters.command('premium_users') & filters.private & admin)
+@Client.on_message(filters.command('premium_users') & filters.private & admin)
 async def list_premium_users_command(client, message):
     # Define IST timezone
     ist = timezone("Asia/Kolkata")
@@ -865,7 +653,7 @@ async def list_premium_users_command(client, message):
 
 #=====================================================================================##
 
-@Bot.on_message(filters.command("count") & filters.private & admin)
+@Client.on_message(filters.command("count") & filters.private & admin)
 async def total_verify_count_cmd(client, message: Message):
     total = await db.get_total_verify_count()
     await message.reply_text(f"Tᴏᴛᴀʟ ᴠᴇʀɪғɪᴇᴅ ᴛᴏᴋᴇɴs ᴛᴏᴅᴀʏ: <b>{total}</b>")
@@ -873,7 +661,7 @@ async def total_verify_count_cmd(client, message: Message):
 
 #=====================================================================================##
 
-@Bot.on_message(filters.command('commands') & filters.private & admin)
-async def bcmd(bot: Bot, message: Message):        
+@Client.on_message(filters.command('commands') & filters.private & admin)
+async def bcmd(Client: Client, message: Message):        
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("• ᴄʟᴏsᴇ •", callback_data = "close")]])
     await message.reply(text=CMD_TXT, reply_markup = reply_markup, quote= True)

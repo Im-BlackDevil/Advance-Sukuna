@@ -8,9 +8,6 @@ import sys
 from datetime import datetime
 from config import *
 
-# Import the invite system initialization function
-from plugins.start import initialize_invite_system
-
 name ="""
  BY INFINIX SYNDICATE
 """
@@ -47,15 +44,16 @@ class Bot(Client):
             sys.exit()
 
         self.set_parse_mode(ParseMode.HTML)
-        self.LOGGER(__name__).info(f"Bot Running..!\n\nCreated by \nhttps://t.me/Infinix_Adult")
+        self.LOGGER(__name__).info(f"Bot Running..!\n\nCreated by \nhttps://t.me/InfinixBotz")
         self.LOGGER(__name__).info(f"""BOT DEPLOYED BY @InfinixBotz""")
 
         self.set_parse_mode(ParseMode.HTML)
         self.username = usr_bot_me.username
         self.LOGGER(__name__).info(f"Bot Running..! Made by @InfinixBotz")   
 
-        # Initialize the invite link system
+        # Initialize the invite link system - Import inside the method to avoid circular import
         try:
+            from plugins.start import initialize_invite_system
             await initialize_invite_system()
             self.LOGGER(__name__).info("✅ Invite link system initialized successfully")
         except Exception as e:
