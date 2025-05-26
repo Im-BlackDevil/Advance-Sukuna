@@ -242,6 +242,7 @@ async def start_command(client: Client, message: Message):
 #=====================================================================================#
 
 # Create a global dictionary to store chat data
+# Create a global dictionary to store chat data
 chat_data_cache = {}
 invite_link_cache = {}  # Cache for storing persistent invite links
 
@@ -722,7 +723,7 @@ async def cleanup_invalid_links_simple():
     
     if invalid_keys:
         print(f"🧹 Cleaned up {len(invalid_keys)} invalid invite links")
-
+        
 #=====================================================================================##
 
 @Bot.on_message(filters.command('myplan') & filters.private)
