@@ -123,18 +123,39 @@ async def start_command(client: Client, message: Message):
                 print(f"Error decoding ID: {e}")
                 return
 
-        temp_msg = await message.reply("<b>Please wait...</b>")
+        try:
+            temp_msg = await message.reply("<b>Please wait...</b>")
+        except Exception as e:
+            if "USER_IS_BLOCKED" in str(e):
+                print(f"User {message.from_user.id} has blocked the bot")
+                return
+            else:
+                print(f"Error sending temp message: {e}")
+                return
+                
         try:
             messages = await get_messages(client, ids)
         except Exception as e:
-            await message.reply_text("Something went wrong!")
+            try:
+                await message.reply_text("Something went wrong!")
+            except:
+                print(f"User {message.from_user.id} has blocked the bot")
             print(f"Error getting messages: {e}")
             return
         finally:
-            await temp_msg.delete()
+            try:
+                await temp_msg.delete()
+            except:
+                pass
 
         codeflix_msgs = []
         for msg in messages:
+            # Check if message has content before copying
+            if not (msg.text or msg.media or msg.caption or msg.sticker or msg.animation or 
+                   msg.document or msg.photo or msg.video or msg.audio or msg.voice or msg.video_note):
+                print(f"Skipping empty message ID: {msg.id}")
+                continue
+                
             caption = (CUSTOM_CAPTION.format(previouscaption="" if not msg.caption else msg.caption.html, 
                                              filename=msg.document.file_name) if bool(CUSTOM_CAPTION) and bool(msg.document)
                        else ("" if not msg.caption else msg.caption.html))
@@ -147,12 +168,22 @@ async def start_command(client: Client, message: Message):
                 codeflix_msgs.append(copied_msg)
             except FloodWait as e:
                 await asyncio.sleep(e.x)
-                copied_msg = await msg.copy(chat_id=message.from_user.id, caption=caption, parse_mode=ParseMode.HTML, 
-                                            reply_markup=reply_markup, protect_content=PROTECT_CONTENT)
-                codeflix_msgs.append(copied_msg)
+                try:
+                    copied_msg = await msg.copy(chat_id=message.from_user.id, caption=caption, parse_mode=ParseMode.HTML, 
+                                                reply_markup=reply_markup, protect_content=PROTECT_CONTENT)
+                    codeflix_msgs.append(copied_msg)
+                except Exception as retry_error:
+                    print(f"Failed to send message after retry: {retry_error}")
+                    continue
             except Exception as e:
-                print(f"Failed to send message: {e}")
-                pass
+                if "Empty messages cannot be copied" in str(e):
+                    print(f"Skipping empty message ID: {msg.id}")
+                elif "USER_IS_BLOCKED" in str(e):
+                    print(f"User {message.from_user.id} has blocked the bot")
+                    return
+                else:
+                    print(f"Failed to send message: {e}")
+                continue
 
         if FILE_AUTO_DELETE > 0:
             notification_msg = await message.reply(
